@@ -1,0 +1,10 @@
+[build]
+  publish = "symbo-suitability-github"
+
+[[edge_functions]]
+  function = "demo-index-gate"
+  path = "/"
+
+[[edge_functions]]
+  function = "demo-index-gate"
+  path = "/index.html"
