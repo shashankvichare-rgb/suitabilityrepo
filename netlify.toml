@@ -1,2 +1,11 @@
 [build]
-  publish = "symbo-suitability-github"
+  publish = "symbo-demos-netlify/symbo-suitability-github"
+  edge_functions = "symbo-demos-netlify/netlify/edge-functions"
+
+[[edge_functions]]
+  function = "demo-index-gate"
+  path = "/"
+
+[[edge_functions]]
+  function = "demo-index-gate"
+  path = "/index.html"
