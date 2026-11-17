@@ -729,6 +729,7 @@ function setProfile(patch, meta = {}) {
   if (!('emi' in clean) && ['loanAmount', 'tenure', 'loanType'].some(k => k in clean)) p.emi = calcEmi(p.loanAmount, LOAN_RATES[p.loanType] || 16, p.tenure);
   const changed = Object.keys(FIELD_META).filter(k => prev[k] !== p[k]);
   if (!changed.length && !meta.force) return;
+  if (state.phoneView === 'sanctioned') { state.phoneView = 'checkout'; state.decision = null; logEvent('loan', 'New customer profile returned journey to checkout'); }
   if (meta.source !== 'preset') state.activePreset = state.mode === 'custom' ? 'custom' : Object.keys(PRESETS).find(id => Object.keys(PRESETS[id].profile).every(k => PRESETS[id].profile[k] === p[k])) || null;
 
   const now = Date.now();
@@ -741,6 +742,7 @@ function setProfile(patch, meta = {}) {
   if (changed.some(k => LOAN_FIELDS.includes(k))) renderLoan(true);
 
   renderResult(SymboCheckoutEngine.recommend(p), { source: meta.source });
+  renderPhoneView();
 }
 
 const quoteSig = r => r ? JSON.stringify({ p: r.products.map(x => [x.id, x.cover, x.premium, x.termMonths, x.vasFee, x.siOptions]), v: r.vas.map(v => v.id) }) : '';
