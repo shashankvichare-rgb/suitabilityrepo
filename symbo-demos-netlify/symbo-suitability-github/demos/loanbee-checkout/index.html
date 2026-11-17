@@ -290,9 +290,11 @@ button:disabled{cursor:not-allowed}
 .stage{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:16px;min-height:0}
 .stage-cap{font-size:12px;color:var(--muted-2)}
 
-.brand{display:flex;align-items:center;gap:10px;padding:2px 2px 8px}
-.brand img{height:22px;width:auto;display:block}
-.brand span{white-space:nowrap;font-size:12px;color:var(--muted-2);border-left:1px solid var(--line);padding-left:10px}
+.brand{display:flex;flex-direction:column;align-items:flex-start;gap:13px;padding:4px 2px 14px}
+.brand img{height:25px;width:auto;display:block}
+.brand h1{font-family:var(--fd);font-size:clamp(22px,2.1vw,29px);font-weight:700;line-height:1.06;letter-spacing:-.035em;color:var(--ink);text-wrap:balance}
+.right-title{font-family:var(--fd);font-size:23px;font-weight:700;line-height:1.12;letter-spacing:-.03em;margin:0 2px 4px}
+.custom-hint{font-size:12px;color:var(--muted);margin:2px 2px 10px}
 .over{font-family:var(--fb);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding:8px 2px 0;display:flex;justify-content:space-between;align-items:center;gap:8px}
 .card{background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-xs)}
 details.lv>summary{list-style:none;display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;min-height:48px}
@@ -328,6 +330,8 @@ details[open]>summary .chev,[aria-expanded="true"]>.chev{transform:rotate(-135de
 .pr{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:0;background:none;padding:9px 12px;min-height:46px;border-radius:12px}
 .pr-k{width:24px;height:24px;border-radius:6px;background:var(--surf);font-family:var(--fd);font-weight:600;font-size:12px;display:grid;place-items:center;flex:none}
 .pr[aria-pressed="true"] .pr-k{background:var(--dark);color:#fff}
+.pr[aria-pressed="true"]{background:var(--g-tint)}
+.pr[aria-pressed="true"]::after{content:"Selected";font-size:10px;font-weight:700;color:var(--g-dark)}
 .pr-n{font-family:var(--fd);font-size:13px;font-weight:600;flex:1;min-width:0}
 .pr-who{font-size:12px;color:var(--muted-2);font-weight:400}
 .pr-d{padding:0 12px 12px 46px;display:flex;flex-direction:column;gap:6px}
@@ -382,6 +386,15 @@ details[open]>summary .chev,[aria-expanded="true"]>.chev{transform:rotate(-135de
 .ev-sub>summary::-webkit-details-marker{display:none}
 .ev-log{list-style:none;margin:0 0 8px;padding:0;max-height:220px;overflow:auto;font-size:11.5px}
 .ev-log li{display:grid;grid-template-columns:64px minmax(0,1fr);gap:8px;padding:4px 0;border-top:1px solid var(--line)}
+.change-list{list-style:none;margin:0;padding:0}
+.change-list li{border-top:1px solid var(--line);padding:10px 0;font-size:12px}
+.change-list li:first-child{border-top:0}
+.change-list time{display:block;font:11px var(--font-mono,ui-monospace,monospace);color:var(--muted-2);margin-bottom:3px}
+.change-list strong{display:block;font-family:var(--fd);font-size:12.5px}
+.rec-reason{display:block;color:var(--muted);font-size:11.5px;margin-top:3px;line-height:1.4}
+.evidence-status{padding:11px;border-radius:10px;background:var(--surf);margin:6px 0 12px}
+.evidence-status b{display:block;font-family:var(--fd);font-size:13px}
+.evidence-status span{font-size:11.5px;color:var(--muted-2)}
 .note{font-size:11.5px;color:var(--muted-2);padding:4px 2px}
 
 /* ---------- Phone ---------- */
@@ -396,6 +409,13 @@ details[open]>summary .chev,[aria-expanded="true"]>.chev{transform:rotate(-135de
 .batt{width:24px;height:12px;border:1.5px solid var(--ink);border-radius:4px;padding:1.5px;position:relative}
 .batt::before{content:"";display:block;height:100%;width:78%;background:var(--ink);border-radius:1.5px}
 .app-h{flex:none;display:flex;align-items:center;gap:10px;padding:4px 16px 10px}
+.journey-tabs{display:flex;gap:5px;margin:0 16px 10px;padding:4px;background:var(--surf);border-radius:11px}
+.journey-tabs button{flex:1;border:0;border-radius:8px;background:transparent;padding:7px 4px;font-family:var(--fd);font-size:12px;font-weight:600;color:var(--muted)}
+.journey-tabs button[aria-selected="true"]{background:#fff;color:var(--ink);box-shadow:var(--shadow-sm)}
+.journey-explain{margin:14px 0;padding:14px;border-radius:12px;background:var(--g-tint);font-size:12px}
+.journey-explain b{font-family:var(--fd);font-size:13px}
+.journey-explain p{margin-top:5px;color:var(--muted)}
+.guide-link{width:100%;border:0;background:#fff;text-align:left;color:var(--g-dark);cursor:pointer}
 .back{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:#fff;display:grid;place-items:center;font-size:16px}
 .lb-mark{display:flex;align-items:center;gap:7px;font-weight:700;font-size:17px;letter-spacing:-.02em;flex:1}
 .lb-mark i{width:18px;height:18px;border-radius:5px;background:var(--yellow);position:relative;display:inline-block}
@@ -535,11 +555,10 @@ details[open]>summary .chev,[aria-expanded="true"]>.chev{transform:rotate(-135de
 
   <!-- ============ LEFT: customer presets + profile levers (presenter) ============ -->
   <aside class="side" id="levers" aria-label="Customer profile levers">
-    <div class="brand"><img id="symbo-logo" src="data:image/png;base64,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" alt="Symbo"><span>Embedded protection demo</span></div>
-    <div class="over"><span>Customer</span></div>
+    <div class="brand"><img id="symbo-logo" src="/symbo-logo.png" alt="Symbo"><h1>Embedded Protection Widget</h1></div>
+    <div class="over"><span>Customer Persona Presets</span></div>
     <div class="card" id="presets"></div>
-    <div class="over"><span>Profile from application</span></div>
-    <div id="lever-groups" style="display:flex;flex-direction:column;gap:8px"></div>
+    <div id="custom-levers" hidden><div class="over"><span>Build your own persona</span></div><p class="custom-hint">Edit the test customer below. The checkout and recommendation update as you change a signal.</p><div id="lever-groups" style="display:flex;flex-direction:column;gap:8px"></div></div>
   </aside>
 
   <!-- ============ CENTER: LoanBee checkout (customer-facing) ============ -->
@@ -553,16 +572,16 @@ details[open]>summary .chev,[aria-expanded="true"]>.chev{transform:rotate(-135de
           <span class="lb-mark" aria-label="LoanBee"><i aria-hidden="true"></i>LoanBee</span>
           <button type="button" class="help" data-action="help">Help</button>
         </header>
+        <div class="journey-tabs" role="tablist" aria-label="Loan journey"><button type="button" role="tab" data-action="phone-view" data-view="sanctioned" aria-selected="false">Sanctioned loan</button><button type="button" role="tab" data-action="phone-view" data-view="checkout" aria-selected="true">Checkout</button></div>
         <div class="prog" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
-        <div class="scroll" id="scroll">
+        <div class="scroll" id="scroll"><div id="sanctioned-view" hidden><h2 class="pg-t">Your loan offer</h2><p class="pg-s">LoanBee · illustrative sanction summary</p><div id="sanction-summary"></div><div class="journey-explain"><b>Next: choose your protection</b><p>Review the optional Symbo recommendations at checkout. Your loan offer is shown separately.</p></div><button type="button" class="btn btn-primary btn-lg" data-action="phone-view" data-view="checkout">Continue to checkout</button></div><div id="checkout-view">
           <h1 class="pg-t">Review and sign</h1>
           <p class="pg-s">Step 5 of 5 · Check your offer</p>
           <div id="loan-summary" data-loan-summary></div>
           <!-- Symbo-powered region. Only this re-renders on profile change. -->
           <section class="sy" id="insurance-module" data-symbo-module aria-label="Optional protection"></section>
           <div class="li-row"><i class="ph ph-file-text" aria-hidden="true"></i><span>Key Fact Statement</span><i class="ph ph-caret-right" aria-hidden="true"></i></div>
-          <div class="li-row"><i class="ph ph-bank" aria-hidden="true"></i><span>Repay by UPI Autopay · HDFC ••4821</span></div>
-        </div>
+          <div class="li-row"><i class="ph ph-bank" aria-hidden="true"></i><span>Repay by UPI Autopay · demo account</span></div><button type="button" class="li-row guide-link" data-action="bundle-guide"><i class="ph ph-info" aria-hidden="true"></i><span>Protection details &amp; how to use them</span><i class="ph ph-caret-right" aria-hidden="true"></i></button></div></div>
         <footer class="foot" id="foot"></footer>
         <div id="sheet-root"></div>
         <div id="toast-root"></div>
@@ -571,29 +590,33 @@ details[open]>summary .chev,[aria-expanded="true"]>.chev{transform:rotate(-135de
     <p class="stage-cap">LoanBee owns the journey · Symbo powers the protection section</p>
   </main>
 
-  <!-- ============ RIGHT: live outcome + demo evidence (presenter) ============ -->
-  <aside class="side" id="outcome" aria-label="Live outcome">
-    <div class="over" style="padding-top:2px"><span>Live outcome</span><button type="button" class="btn btn-dark btn-sm" data-action="play-demo" id="play-demo">Play B → C</button></div>
+  <!-- ============ RIGHT: recommendations and records ============ -->
+  <aside class="side" id="outcome" aria-label="Recommendations and evidence">
+    <div class="over" style="padding-top:2px"><span>Symbo decision view</span></div>
+    <h2 class="right-title">Recommendations &amp; records</h2>
     <section class="card wc" id="what-changed" data-what-changed aria-live="polite">
-      <div class="over" style="padding:0 0 6px"><span>What changed</span><span class="mini" id="wc-time" style="letter-spacing:0"></span></div>
+      <div class="over" style="padding:0 0 6px"><span>Latest change</span><span class="mini" id="wc-time"></span></div>
       <p class="wc-line" id="wc-line" data-wc-headline></p>
-      <div class="ba" id="wc-ba"></div>
-      <details id="wc-more"><summary>Details<span class="chev"></span></summary><div id="wc-body"></div></details>
+      <div class="ba" id="wc-ba"></div><div id="wc-body"></div>
     </section>
-    <details class="card lv" id="sl-card">
-      <summary><span class="lv-txt"><span class="lv-t">Shortlist</span><span class="lv-s" id="sl-sum"></span></span><span id="sl-status"></span><span class="chev"></span></summary>
+    <details class="card lv" id="sl-card" open>
+      <summary><span class="lv-txt"><span class="lv-t">Recommended &amp; why</span><span class="lv-s" id="sl-sum"></span></span><span id="sl-status"></span><span class="chev"></span></summary>
       <div class="lv-body" id="sl-body"></div>
     </details>
+    <details class="card lv" id="change-card" open>
+      <summary><span class="lv-txt"><span class="lv-t">Live change records</span><span class="lv-s">Profile, recommendation and choice events</span></span><span class="chev"></span></summary>
+      <div class="lv-body"><ul class="change-list" id="change-list"></ul></div>
+    </details>
     <details class="card lv" id="ev-card">
-      <summary><span class="lv-txt"><span class="lv-t">Demo evidence</span><span class="lv-s" id="ev-sum"></span></span><span class="badge b-review">Illustrative</span><span class="chev"></span></summary>
+      <summary><span class="lv-txt"><span class="lv-t">Consent &amp; audit evidence</span><span class="lv-s" id="ev-sum"></span></span><span class="badge b-review">Demo</span><span class="chev"></span></summary>
       <div class="lv-body" id="evidence-view" data-evidence>
         <div id="ev-main"></div>
         <details class="ev-sub"><summary>Profile signals used<span class="chev"></span></summary><div id="ev-signals"></div></details>
-        <details class="ev-sub"><summary>Event log<span class="chev"></span></summary><ul class="ev-log" id="ev-log"></ul></details>
-        <div style="padding:8px 0 8px"><button type="button" class="btn btn-ghost btn-sm" data-action="copy-evidence">Copy as JSON</button></div>
+        <details class="ev-sub"><summary>Full event log<span class="chev"></span></summary><ul class="ev-log" id="ev-log"></ul></details>
+        <div style="padding:8px 0 8px"><button type="button" class="btn btn-ghost btn-sm" data-action="copy-evidence">Copy evidence JSON</button></div>
       </div>
     </details>
-    <p class="note">Demo evidence stays in this browser. Symbo catalogue rules and reference rate-card prices power the protection section; these are not live quotes or production audit records. Loan terms are illustrative.</p>
+    <p class="note">Browser-only demo evidence and reference rate-card prices. No live quote, payment, policy issuance or production audit record.</p>
   </aside>
 </div>
 <div class="scrim" id="scrim" data-action="close-drawers"></div>
@@ -670,7 +693,7 @@ function hashId(o) { const s = JSON.stringify(o); let h = 2166136261; for (let i
    ===================================================================== */
 const state = {
   profile: Object.assign({}, PRESETS.A.profile),
-  activePreset: 'A', presetOpen: 'A',
+  activePreset: 'A', mode: 'preset', phoneView: 'checkout',
   result: null, baseline: null, lastChangeAt: 0, diff: null,
   added: {}, vasAdded: {}, paSI: null,      // nothing added by default
   decision: null, notice: false,
@@ -706,7 +729,7 @@ function setProfile(patch, meta = {}) {
   if (!('emi' in clean) && ['loanAmount', 'tenure', 'loanType'].some(k => k in clean)) p.emi = calcEmi(p.loanAmount, LOAN_RATES[p.loanType] || 16, p.tenure);
   const changed = Object.keys(FIELD_META).filter(k => prev[k] !== p[k]);
   if (!changed.length && !meta.force) return;
-  if (meta.source !== 'preset') state.activePreset = Object.keys(PRESETS).find(id => Object.keys(PRESETS[id].profile).every(k => PRESETS[id].profile[k] === p[k])) || null;
+  if (meta.source !== 'preset') state.activePreset = state.mode === 'custom' ? 'custom' : Object.keys(PRESETS).find(id => Object.keys(PRESETS[id].profile).every(k => PRESETS[id].profile[k] === p[k])) || null;
 
   const now = Date.now();
   if (meta.source === 'preset' || now - state.lastChangeAt > 1500) state.baseline = state.result;
@@ -788,6 +811,13 @@ function renderLoan(flash) {
     </dl>
     <div class="loan-rcv"><span>You receive</span><b>${fmtINR(p.loanAmount - fee)}</b></div>
   </div>`;
+  $('#sanction-summary').innerHTML = `<div class="loan${flash ? ' flash' : ''}"><div class="loan-top"><span>${esc(p.loanType)}</span><span class="badge b-green">Sanctioned · demo</span></div><div class="loan-amt">${fmtINR(p.loanAmount)}</div><dl class="loan-g"><div><dt>Loan term</dt><dd>${p.tenure} months</dd></div><div><dt>Monthly EMI</dt><dd>${fmtINR(p.emi)}</dd></div><div><dt>Interest</dt><dd>${LOAN_RATES[p.loanType] || 16}% p.a.</dd></div><div><dt>Processing fee</dt><dd>${fmtINR(fee)}</dd></div></dl><div class="loan-rcv"><span>Illustrative amount received</span><b>${fmtINR(p.loanAmount - fee)}</b></div></div>`;
+}
+function renderPhoneView() {
+  $('#sanctioned-view').hidden = state.phoneView !== 'sanctioned';
+  $('#checkout-view').hidden = state.phoneView !== 'checkout';
+  $$('.journey-tabs [role=tab]').forEach(b => b.setAttribute('aria-selected', b.dataset.view === state.phoneView));
+  renderFooter();
 }
 
 const paOpt = p => (p.siOptions || []).find(o => o.si === state.paSI) || { si: p.cover, premium: p.premium };
@@ -891,9 +921,10 @@ function renderModule({ animate = false, prev = null } = {}) {
 
 function renderFooter() {
   const f = $('#foot'), t = totals(), d = state.decision;
+  if (state.phoneView === 'sanctioned') { f.innerHTML = `<div class="foot-b"><button type="button" class="cta" data-action="phone-view" data-view="checkout">Continue to checkout</button></div>`; return; }
   if (d) {
     f.innerHTML = `<div class="foot-l"><span>${d.type === 'accepted' ? `Demo selection recorded · ${d.items.length} item${d.items.length > 1 ? 's' : ''}` : 'No protection added'}</span><b>${d.type === 'accepted' ? fmtINR(d.total) : ''}</b></div>
-      <div class="foot-b"><button type="button" class="cta" data-action="esign">Continue to e-sign</button></div>`;
+      <div class="foot-b"><button type="button" class="cta" data-action="esign">View sanctioned loan</button></div>`;
   } else if (t.n) {
     f.innerHTML = `<div class="foot-l"><span>Optional protection total</span><b>${fmtINR(t.all)}</b></div>
       <div class="foot-b"><button type="button" class="cta-2" data-action="decline" data-consent="decline">Skip</button><button type="button" class="cta" data-action="checkout" data-consent="checkout">Checkout with protection</button></div>`;
@@ -933,6 +964,10 @@ function renderSheet() {
         <button type="button" class="btn btn-ghost btn-lg" data-action="close-sheet">Go back</button>
       </div>`;
     }
+  } else if (s.type === 'guide') {
+    const items = chosen(), products = items.length ? state.result.products.filter(x => state.added[x.id]) : state.result.products;
+    const services = items.length ? state.result.vas.filter(v => state.vasAdded[v.id]) : state.result.vas;
+    h = head('Protection details', items.length ? 'Your selected protection' : 'How protection would work') + `<div class="sh-b"><p class="sh-fine">${items.length ? 'The customer selected these items in this browser demo.' : 'Review the recommendations first. Nothing has been selected or issued.'}</p><h3>Insurance cover</h3><ul>${products.map(x => `<li><b>${esc(x.name)}</b> · ${coverOf(x)} · ${x.termMonths}-month policy<br><span class="mini">${esc(x.desc)}</span></li>`).join('') || '<li>No insurance selected.</li>'}</ul><h3>Value-added services</h3><ul>${services.map(v => `<li>${esc(v.name)}</li>`).join('') || '<li>No services selected.</li>'}</ul>${services.length ? `<p class="sh-fine">Optional VAS bundle fee applies once: ${fmtINR(items.length ? selectedBundleFee() ?? 0 : SymboCheckoutEngine.indicativeBundleFee(state.result) ?? 0)} (reference).</p>` : ''}<h3>How to avail the benefits</h3><ol><li>In a live journey, complete the separate insurance consent and payment steps.</li><li>After issuance, use the insurer’s policy document for cover, exclusions and claim contact details.</li><li>For selected value-add services, follow the provider’s activation instructions sent after enrolment.</li></ol><p class="sh-fine">This demo does not issue a policy, activate services or create a claim.</p></div><div class="sh-f"><button type="button" class="btn btn-dark btn-lg" data-action="close-sheet">Back to journey</button></div>`;
   } else if (s.type === 'record') {
     const d = state.decision;
     h = head('Demo decision recorded', d.type === 'accepted' ? 'Selection recorded' : 'No protection added') + `<div class="sh-b">
@@ -941,7 +976,8 @@ function renderSheet() {
       : '<p style="font-size:13px" data-decision="declined">Nothing was charged. You can add cover later from My loan.</p>'}
       <p class="sh-fine mono">Ref ${d.recommendationId} · ${fmtTime(d.at)}</p>
     </div><div class="sh-f">
-      <button type="button" class="btn btn-dark btn-lg" data-action="esign">Continue to e-sign</button>
+      ${d.type === 'accepted' ? '<button type="button" class="btn btn-ghost btn-lg" data-action="bundle-guide">Protection details & how to use</button>' : ''}
+      <button type="button" class="btn btn-dark btn-lg" data-action="esign">View sanctioned loan</button>
       <button type="button" class="btn btn-ghost btn-lg" data-action="close-sheet">Back to checkout</button>
     </div>`;
   }
@@ -971,13 +1007,12 @@ function buildLevers() {
 const presetOutcome = {};
 function renderPresets() {
   $('#presets').innerHTML = Object.keys(PRESETS).map(id => {
-    const pr = PRESETS[id], on = state.activePreset === id, open = on && state.presetOpen === id;
+    const pr = PRESETS[id], on = state.activePreset === id;
     if (!presetOutcome[id]) { const pp = Object.assign({}, pr.profile); pp.emi = calcEmi(pp.loanAmount, LOAN_RATES[pp.loanType], pp.tenure); presetOutcome[id] = SymboCheckoutEngine.recommend(pp); }
     const r = presetOutcome[id];
-    return `<div class="pr-item"><button type="button" class="pr" data-action="preset" data-preset="${id}" aria-pressed="${on}" aria-expanded="${open}" data-fk="pr-${id}">
-        <span class="pr-k">${id}</span><span class="pr-n">${pr.label} <span class="pr-who">· ${pr.profile.name.split(' ')[0]}</span></span><span class="chev"></span></button>
-      <div class="pr-d" ${open ? '' : 'hidden'}><p>${pr.blurb}</p><div class="chips">${r.products.map(x => `<span class="chip">${x.id === 'pa' ? 'PA ' + fmtL(x.suggestedSI) : x.short}</span>`).join('')}${r.vas.length ? `<span class="chip svc">+${r.vas.length} service${r.vas.length > 1 ? 's' : ''}</span>` : ''}</div></div></div>`;
-  }).join('');
+    return `<div class="pr-item"><button type="button" class="pr" data-action="preset" data-preset="${id}" aria-pressed="${on}" data-fk="pr-${id}"><span class="pr-k">${id}</span><span class="pr-n">${esc(pr.profile.name)}<span class="pr-who"> · ${pr.label}</span></span></button>${on ? `<div class="pr-d"><p>${esc(pr.blurb)}</p><div class="chips">${r.products.map(x => `<span class="chip">${esc(x.short)}</span>`).join('')}${r.vas.length ? `<span class="chip svc">${r.vas.length} relevant service${r.vas.length > 1 ? 's' : ''}</span>` : ''}</div></div>` : ''}</div>`;
+  }).join('') + `<div class="pr-item"><button type="button" class="pr" data-action="custom-persona" aria-pressed="${state.mode === 'custom'}" data-fk="pr-custom"><span class="pr-k">+</span><span class="pr-n">Build your own persona<span class="pr-who"> · test customer</span></span></button></div>`;
+  $('#custom-levers').hidden = state.mode !== 'custom';
   const el = state.focusPreset && $(`[data-fk="${state.focusPreset}"]`); if (el) { el.focus({ preventScroll: true }); state.focusPreset = null; }
 }
 
@@ -990,35 +1025,34 @@ function syncInputs(skip) {
   LEVER_GROUPS.forEach((g, i) => { const s = $(`[data-group-sum="${i}"]`); if (s) s.textContent = g.sum(p); });
 }
 
-function chip(x, cls = '') { return `<span class="chip ${cls}">${x.id === 'pa' ? 'PA ' + fmtL(x.suggestedSI) : x.name}</span>`; }
+function renderChangeRecords() {
+  const labels = { profile: 'Customer signal', recommendation: 'Recommendation updated', consent: 'Customer choice', terms: 'Details viewed', selection: 'Cover changed', decision: 'Checkout decision', loan: 'Loan journey' };
+  $('#change-list').innerHTML = state.events.slice(0, 12).map(e => {
+    const message = e.type === 'recommendation' ? e.text.replace(/^[^:]+:\s*/, '') : e.text;
+    return `<li><time>${fmtTime(e.at)}</time><strong>${labels[e.type] || 'Activity'}</strong><span>${esc(message)}</span></li>`;
+  }).join('') || '<li>No changes recorded yet.</li>';
+}
 function renderOutcome() {
-  const r = state.result, d = state.diff;
-  if (!d) {
-    $('#wc-line').textContent = 'Pick a preset or change a lever. Only the protection section updates.';
-    $('#wc-ba').innerHTML = `<span class="ba-k">Now</span><div class="chips">${r.products.map(x => chip(x)).join('')}</div>`;
-    $('#wc-body').innerHTML = `<ul class="why">${r.reasons.slice(0, 3).map(x => `<li>${esc(x)}</li>`).join('')}</ul>`;
-    $('#wc-time').textContent = '';
+  const r = state.result, d = state.diff, dec = state.decision;
+  $('#wc-line').textContent = d ? d.changedAny ? d.headline.replace('Customer changed → ', '') : 'Customer signal changed; the recommendation remains the same.' : `${state.profile.name} is the active customer.`;
+  $('#wc-time').textContent = d ? fmtClock(d.at) : '';
+  if (d && d.changedAny) {
+    const before = d.before.products.map(x => x.name).join(' + ') || 'No insurance';
+    const after = d.after.products.map(x => x.name).join(' + ') || 'No insurance';
+    $('#wc-ba').innerHTML = `<span class="ba-k">Before</span><span>${esc(before)}</span><span class="ba-k">Now</span><b>${esc(after)}</b>`;
+    $('#wc-body').innerHTML = `<p class="mini" style="margin-top:10px">If every suggestion were added: ${fmtINR(d.totalBefore)} → <b>${fmtINR(d.totalAfter)}</b></p><ul class="why">${d.reasons.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`;
+    const c = $('#what-changed'); c.classList.remove('flash'); void c.offsetWidth; c.classList.add('flash');
   } else {
-    const list = (res, other, mark) => res.products.map(x => chip(x, other.products.some(o => o.id === x.id) ? '' : mark)).join('') || '<span class="mini">None</span>';
-    $('#wc-line').textContent = d.headline;
-    $('#wc-ba').innerHTML = `<span class="ba-k">Before</span><div class="chips">${list(d.before, d.after, 'rem')}</div><span class="ba-k">After</span><div class="chips">${list(d.after, d.before, 'add')}</div>`;
-    const prod = [...d.added.map(x => `<span class="chip add">+ ${x.name}</span>`), ...d.removed.map(x => `<span class="chip rem">${x.name}</span>`)].join('') || '<span class="mini">No change</span>';
-    const vas = [...d.vasAdded.map(v => `<span class="chip add">+ ${v.name}</span>`), ...d.vasRemoved.map(v => `<span class="chip rem">${v.name}</span>`)].join('') || '<span class="mini">No change</span>';
-    const si = d.siBefore === d.siAfter ? `<span class="mini">${d.siAfter ? fmtLakh(d.siAfter) : '-'}, no change</span>` : `${d.siBefore ? fmtLakh(d.siBefore) : '-'} → <b>${d.siAfter ? fmtLakh(d.siAfter) : '-'}</b>`;
-    const price = d.totalBefore === d.totalAfter ? `<span class="mini">${fmtINR(d.totalAfter)}, no change</span>` : `${fmtINR(d.totalBefore)} → <b>${fmtINR(d.totalAfter)}</b>`;
-    $('#wc-body').innerHTML = `<dl class="kv"><dt>Products</dt><dd data-wc="products">${prod}</dd><dt>PA sum insured</dt><dd data-wc="si">${si}</dd><dt>Services</dt><dd data-wc="vas">${vas}</dd><dt>Proposed price</dt><dd data-wc="price">${price}</dd></dl>
-      <p class="mini" style="margin-top:6px">Price if every suggestion were added. It moves with cover, not as a goal.</p>
-      <ul class="why">${d.reasons.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`;
-    $('#wc-time').textContent = fmtClock(d.at);
-    if (d.changedAny) { const c = $('#what-changed'); c.classList.remove('flash'); void c.offsetWidth; c.classList.add('flash'); }
+    $('#wc-ba').innerHTML = `<span class="ba-k">Showing</span><b>${esc(state.profile.name)}</b>`;
+    const latest = state.events.find(e => e.type === 'profile');
+    $('#wc-body').innerHTML = `<p class="mini" style="margin-top:9px">${latest ? esc(latest.text) : 'Select another persona, or build your own to see the offer change.'}</p>`;
   }
-  const dec = state.decision;
-  $('#sl-status').innerHTML = dec ? (dec.type === 'accepted' ? '<span class="badge b-green">Accepted</span>' : '<span class="badge b-plain">Declined</span>') : state.notice ? '<span class="badge b-review">Review</span>' : '<span class="badge b-plain">Pending</span>';
-  $('#sl-sum').textContent = `${r.products.length} insurance · ${r.vas.length} service${r.vas.length === 1 ? '' : 's'} · ${fmtINR(proposedTotal(r))}`;
-  $('#sl-body').innerHTML = r.products.map(x => `<div class="sl"><span><b>${esc(x.name)}</b><br><span class="mini">${coverOf(x)} · ${x.termMonths}-month policy</span></span><span>${fmtINR(priceOf(x))}</span></div>`).join('')
-    + r.vas.map(v => `<div class="sl"><span>${esc(v.name)} <span class="chip svc">Service</span></span><span class="mini">In bundle</span></div>`).join('')
-    + (r.vas.length ? `<div class="sl"><span class="mini">Optional VAS bundle fee, once</span><span>${fmtINR(SymboCheckoutEngine.indicativeBundleFee(r) ?? 0)}</span></div>` : '')
-    + `<div class="sl"><span class="mini">Not shortlisted</span><span class="mini" style="text-align:right">${r.notRecommended.map(n => n.name).join(', ') || '-'}</span></div>`;
+  $('#sl-status').innerHTML = dec ? (dec.type === 'accepted' ? '<span class="badge b-green">Chosen</span>' : '<span class="badge b-plain">Skipped</span>') : state.notice ? '<span class="badge b-review">Review</span>' : '<span class="badge b-plain">Optional</span>';
+  $('#sl-sum').textContent = `${r.products.length} insurance · ${r.vas.length} services · ${fmtINR(proposedTotal(r))} if all added`;
+  $('#sl-body').innerHTML = r.products.map(x => `<div class="sl"><span><b>${esc(x.name)}</b><span class="rec-reason">${esc(x.reason)}</span><span class="mini">${coverOf(x)} · ${x.termMonths}-month policy</span></span><b>${fmtINR(priceOf(x))}</b></div>`).join('')
+    + (r.vas.length ? `<div class="sl"><span><b>Relevant value-add services</b><span class="rec-reason">${r.vas.map(v => esc(v.name)).join(' · ')}</span><span class="mini">Optional bundle fee charged once</span></span><b>${fmtINR(SymboCheckoutEngine.indicativeBundleFee(r) ?? 0)}</b></div>` : '')
+    + (r.notRecommended.length ? `<div class="sl"><span class="mini">Outside this shortlist</span><span class="mini" style="text-align:right">${r.notRecommended.map(n => esc(n.name)).join(', ')}</span></div>` : '');
+  renderChangeRecords();
 }
 
 function buildEvidence() {
@@ -1041,15 +1075,16 @@ function buildEvidence() {
 function renderEvidence() {
   if (!state.result) return;
   const ev = buildEvidence(), a = ev.customerAction;
-  $('#ev-sum').textContent = ev.recommendationId;
-  $('#ev-main').innerHTML = `<table class="ev-t"><tbody>
+  $('#ev-sum').textContent = a.status === 'accepted' ? 'Customer chose protection' : a.status === 'declined' ? 'Customer skipped protection' : 'Choice pending';
+  const choices = state.events.filter(e => e.type === 'consent').slice(0, 8);
+  $('#ev-main').innerHTML = `<div class="evidence-status"><b>${a.status === 'accepted' ? 'Customer choice recorded' : a.status === 'declined' ? 'Customer chose to continue without protection' : 'Awaiting customer choice'}</b><span>${a.at ? `Recorded ${fmtTime(new Date(a.at))}` : 'No insurance or service is preselected. Each addition requires a separate customer action.'}</span></div><table class="ev-t"><tbody>
     <tr><td class="mini">Recommendation ID</td><td class="mono" data-ev="recommendation-id">${ev.recommendationId}</td></tr>
     <tr><td class="mini">Rule version</td><td class="mono" data-ev="rule-version">${ev.ruleVersion}</td></tr>
     <tr><td class="mini">Shown</td><td>${ev.shownAt ? fmtTime(new Date(ev.shownAt)) : '-'}</td></tr>
     <tr><td class="mini">Presented</td><td data-ev="products">${ev.productsPresented.map(x => `${esc(x.name)}: ${x.coverShown}, ${fmtINR(x.referencePremiumInclGst)}`).join('<br>')}${ev.servicesPresented.length ? '<br>' + ev.servicesPresented.map(v => `${esc(v.name)} (service)`).join('<br>') + `<br>VAS bundle once: ${fmtINR(ev.vasBundle.referenceFeeInclGst ?? 0)}` : ''}</td></tr>
     <tr><td class="mini">Customer action</td><td data-ev="customer-action">${a.status === 'accepted' ? `Accepted ${a.items.length} · ${fmtINR(a.total)}` : a.status === 'declined' ? 'Declined, continued without' : a.status}</td></tr>
     <tr><td class="mini">Timestamp</td><td data-ev="action-at">${a.at ? fmtTime(new Date(a.at)) : '-'}</td></tr>
-  </tbody></table>`;
+  </tbody></table><div class="over" style="margin-top:10px"><span>Consent activity</span></div><ul class="change-list">${choices.length ? choices.map(e => `<li><time>${fmtTime(e.at)}</time><span>${esc(e.text)}</span></li>`).join('') : '<li>No additions or removals yet.</li>'}</ul>`;
   $('#ev-signals').innerHTML = `<table class="ev-t" data-ev="signals"><tbody>${ev.profileSignals.map(s => `<tr><td>${s.label}</td><td><b>${esc(fmtField(s.key, s.value))}</b></td><td class="mini">${s.source}</td></tr>`).join('')}</tbody></table>`;
   $('#ev-log').innerHTML = state.events.map(e => `<li><span class="mono mini">${fmtClock(e.at)}</span><span>${esc(e.text)}</span></li>`).join('');
 }
@@ -1059,7 +1094,7 @@ function renderEvidence() {
    ===================================================================== */
 const scopeOf = el => el.closest('#phone') ? 'phone' : 'console';
 function loadPreset(id) {
-  state.activePreset = id; state.presetOpen = id;
+  state.activePreset = id; state.mode = 'preset';
   const pp = Object.assign({}, PRESETS[id].profile); pp.emi = calcEmi(pp.loanAmount, LOAN_RATES[pp.loanType], pp.tenure);
   setProfile(pp, { source: 'preset', preset: id, force: true });
 }
@@ -1077,16 +1112,13 @@ const ACTIONS = {
   help: () => toast('LoanBee support is outside this demo.'),
   preset: el => {
     const id = el.dataset.preset; state.focusPreset = el.dataset.fk;
-    if (state.activePreset === id) { state.presetOpen = state.presetOpen === id ? null : id; renderPresets(); }
-    else loadPreset(id);
+    if (state.activePreset !== id) loadPreset(id);
   },
-  'play-demo': el => {
-    el.disabled = true; el.textContent = 'Showing B';
-    loadPreset('B');
-    setTimeout(() => { loadPreset('C'); el.textContent = 'Play B → C'; el.disabled = false; $('#wc-more').open = true; }, 1700);
-  },
+  'custom-persona': () => { if (state.mode === 'custom') return; state.mode = 'custom'; state.activePreset = 'custom'; setProfile({ name: 'Test Customer' }, { source: 'custom', force: true }); logEvent('profile', 'Custom persona mode selected'); renderPresets(); renderChangeRecords(); },
+  'phone-view': el => { state.phoneView = el.dataset.view; renderPhoneView(); },
+  'bundle-guide': el => openSheet({ type: 'guide' }, el),
   'toggle-module': () => { state.moduleOpen = !state.moduleOpen; renderModule(); },
-  info: el => { logEvent('terms', `Viewed terms: ${findItem(el.dataset.kind, el.dataset.id).name}`); openSheet({ type: 'info', kind: el.dataset.kind, id: el.dataset.id }, el); renderEvidence(); },
+  info: el => { logEvent('terms', `Viewed terms: ${findItem(el.dataset.kind, el.dataset.id).name}`); openSheet({ type: 'info', kind: el.dataset.kind, id: el.dataset.id }, el); renderEvidence(); renderChangeRecords(); },
   add: el => {
     if (el.dataset.kind === 'vas' && selectedBundleFee() == null) { toast('Choose an insurance cover first to see the VAS bundle fee.'); return; }
     openSheet({ type: 'consent', kind: el.dataset.kind, id: el.dataset.id }, el);
@@ -1130,7 +1162,7 @@ const ACTIONS = {
     logEvent('decision', 'Continued without protection');
     afterChoice(); state.sheetOpener = null; openSheet({ type: 'record' });
   },
-  esign: () => { logEvent('loan', 'Continued to e-sign'); renderEvidence(); if (state.sheet) closeSheet(); toast('Demo ends here. LoanBee handles e-sign.'); },
+  esign: () => { logEvent('loan', 'Checkout completed in demo'); if (state.sheet) closeSheet(); state.phoneView = 'sanctioned'; renderPhoneView(); renderEvidence(); renderChangeRecords(); toast('Demo checkout complete. No loan was disbursed.'); },
   'close-sheet': () => closeSheet(),
   'sheet-bg': (el, e) => { if (e.target === el) closeSheet(); },
   'copy-evidence': () => {
@@ -1180,7 +1212,7 @@ document.addEventListener('focusin', e => {
    window.LoanBeeDemo.renderResult(result) render a suitability + pricing response
    ===================================================================== */
 window.LoanBeeDemo = {
-  setProfile: patch => setProfile(patch || {}, { source: 'api' }),
+  setProfile: patch => { state.mode = 'custom'; setProfile(patch || {}, { source: 'api' }); },
   renderResult: result => { state.baseline = state.result; renderResult(result, { source: 'api' }); },
   getProfile: () => Object.assign({}, state.profile),
   getResult: () => state.result,
