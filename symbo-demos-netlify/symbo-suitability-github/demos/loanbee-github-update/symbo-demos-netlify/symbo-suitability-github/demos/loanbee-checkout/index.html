@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<!--
+  LoanBee checkout x Symbo embedded protection demo.
+  Static HTML and JavaScript; Symbo suitability rules and reference rate-card
+  data are loaded from sibling files. No build step or backend is required.
+
+  WHERE TO WIRE REAL LOGIC
+  1. loanbee-engine.js maps the LoanBee fields to the existing Symbo rules.
+  2. config.js, source-data.js and engine.js supply the actual demo catalogue,
+     suitability scores and reference prices used by the original engine demo.
+  3. A production integration would replace browser calculation and event logs
+     with authenticated server decisions, live quotes and durable audit records.
+  4. Stable hooks: window.LoanBeeDemo.setProfile(patch), window.LoanBeeDemo.renderResult(result),
+     plus getProfile(), getResult(), getEvidence(), loadPreset(id).
+
+  RULES THE UI ENFORCES (keep them when adding logic)
+  - Nothing is pre-selected. Each item needs its own "I agree, add" tap in the consent sheet.
+  - A material quote change clears all consents and shows the review notice.
+  - Value-adds have one optional bundle fee tied to the selected primary
+    insurance rate-card row. There is no invented per-service price.
+  - Policy term is shown separately from loan tenure.
+
+  SELECTORS
+  [data-field] profile inputs · [data-product-id] / [data-vas-id] rows · [data-si-selector]
+  [data-totals] [data-total] · [data-consent] consent controls · [data-decision] record
+  [data-evidence] [data-ev] evidence · [data-what-changed] [data-wc] outcome panel
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LoanBee checkout · Symbo embedded protection demo</title>
+<!-- Symbo Design System 2: tokens, type and bundle -->
+<style id="symbo-ds-tokens">
+/* ─────────────────────────────────────────────
+   Symbo Design System — Colors & Type Tokens
+   Brand: #00c98f (Symbo Green) · #013a51 (Deep Blue)
+   Family: Inter Tight (display/UI) · Inter (body/labels)
+   ───────────────────────────────────────────── */
+
+/* Brand fonts — real families (Inter Tight, Inter, JetBrains Mono).
+   Served from Google Fonts until the user uploads self-hosted files;
+   these are the actual specified families, NOT substitutes. */
+@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  /* ── Brand colors ─────────────────────────── */
+  --symbo-green:        #00c98f;  /* Primary brand green (logo) */
+  --symbo-green-bright: #00d182;  /* Bright accent — gradients, hover */
+  --symbo-green-mid:    #1fc98b;  /* Subtle differentiator */
+  --symbo-green-dark:   #006d41;  /* Deep brand green — gradient base */
+  --symbo-green-deep:   #004a2e;  /* Text on green tints */
+  --symbo-blue:         #013a51;  /* Deep blue — secondary brand */
+  --symbo-blue-soft:    #d6e9ff;  /* Blue-tinted surface (used sparingly) */
+
+  /* Tints (used on light surfaces for chips/icon backings) */
+  --green-tint-08:      rgba(0, 209, 130, 0.08);
+  --green-tint-12:      rgba(0, 209, 130, 0.12);
+  --green-tint-20:      rgba(0, 209, 130, 0.20);
+  --green-tint-soft:    #ccf6e6;  /* solid pale green for icon backings */
+
+  /* ── Accent colors ────────────────────────── */
+  --accent-yellow:      #fdd340;  /* Highlight accent (gradient bar) */
+  --accent-yellow-warm: #fbd22b;
+  --accent-yellow-tint: #ffeda9;  /* Solid pale yellow */
+  --accent-amber-deep:  #715b00;  /* Text on yellow tints */
+  --accent-coral:       #ff7c7c;  /* Status — pending/alert */
+
+  /* ── Neutrals (dark) ──────────────────────── */
+  --ink:                #1b1c1c;  /* Primary text */
+  --ink-near-black:     #141414;  /* Dark surface / hero bg */
+  --ink-2:              #2e2e2e;
+  --gray-700:           #3c4a40;  /* Muted body text (warm gray) */
+  --gray-500:           #4f4f4f;  /* Secondary UI gray */
+
+  /* ── Neutrals (light) ─────────────────────── */
+  --border:             #bacbbd;  /* Sage-tinted border (brand) */
+  --border-soft:        rgba(186,203,189,0.30);
+  --border-faint:       rgba(186,203,189,0.20);
+  --border-line:        #e4e2e1;  /* Hairline dividers */
+  --surface:            #f6f3f2;  /* Off-white card surface (warm) */
+  --surface-2:          #fcf9f8;  /* Even lighter */
+  --white:              #ffffff;
+
+  /* ── Semantic foreground ──────────────────── */
+  --fg-1:               var(--ink);
+  --fg-2:               var(--gray-700);
+  --fg-3:               var(--gray-500);
+  --fg-on-dark:         #ffffff;
+  --fg-on-dark-2:       rgba(255,255,255,0.75);
+  --fg-on-dark-3:       rgba(255,255,255,0.55);
+  --fg-accent:          var(--symbo-green);
+  --fg-link:            var(--symbo-green);
+
+  /* ── Semantic backgrounds ─────────────────── */
+  --bg-page:            #ffffff;
+  --bg-page-warm:       var(--surface);
+  --bg-hero-dark:       var(--ink-near-black);
+  --bg-card:            #ffffff;
+  --bg-card-warm:       var(--surface);
+
+  /* ── Gradients (signature) ────────────────── */
+  --grad-cta:           linear-gradient(180deg, var(--symbo-green-dark) 0%, var(--symbo-green-bright) 100%);
+  --grad-cta-h:         linear-gradient(90deg,  var(--symbo-green-dark) 0%, var(--symbo-green-bright) 100%);
+  --grad-bottom-bar:    linear-gradient(90deg,  var(--symbo-green-bright) 25%, var(--accent-yellow) 84%);
+  --grad-top-bar:       linear-gradient(180deg, var(--symbo-green-bright) 0%, var(--accent-yellow) 100%);
+  --grad-glow-green:    radial-gradient(closest-side, var(--green-tint-12) 0%, rgba(0,209,130,0) 70%);
+  --grad-glow-soft:     radial-gradient(closest-side, var(--green-tint-08) 0%, rgba(0,209,130,0) 70%);
+  --grad-deco-light:    linear-gradient(180deg, rgba(31,201,139,0.10) 0%, rgba(253,210,45,0.10) 100%); /* @kind color */
+
+  /* ── Radii ────────────────────────────────── */
+  --r-xs:  4px;
+  --r-sm:  6px;
+  --r-md:  8px;
+  --r-lg:  12px;
+  --r-xl:  16px;
+  --r-2xl: 24px;
+  --r-pill: 9999px;
+
+  /* ── Shadows ──────────────────────────────── */
+  --shadow-xs:   0 1px 2px rgba(27,28,28,0.05);
+  --shadow-sm:   0 1px 2px rgba(27,28,28,0.05), 0 2px 4px rgba(27,28,28,0.02);
+  --shadow-md:   0 4px 6px -2px rgba(27,28,28,0.05), 0 10px 15px -3px rgba(27,28,28,0.08);
+  --shadow-lg:   0 8px 10px -6px rgba(27,28,28,0.10), 0 20px 25px -5px rgba(27,28,28,0.10);
+  --shadow-cta:  0 12px 30px -10px rgba(0,209,130,0.45);
+  --shadow-inner-border: inset 0 0 0 1px var(--border-soft);
+
+  /* ── Spacing (8-pt grid) ──────────────────── */
+  --sp-0:  0px;
+  --sp-1:  4px;
+  --sp-2:  8px;
+  --sp-3:  12px;
+  --sp-4:  16px;
+  --sp-5:  20px;
+  --sp-6:  24px;
+  --sp-8:  32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+  --sp-16: 64px;
+  --sp-20: 80px;
+
+  /* ── Typography families ──────────────────── */
+  --font-display: 'Inter Tight', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-body:    'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono:    ui-monospace, 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+
+  /* ── Type scale (used at 1x — slides scale 2x) ── */
+  --t-display:  52px;  /* Hero on landing */
+  --t-h1:       38px;
+  --t-h2:       28px;
+  --t-h3:       22px;
+  --t-h4:       18px;
+  --t-body-lg:  18px;
+  --t-body:     15px;
+  --t-body-sm:  13px;
+  --t-label:    14px;
+  --t-caption:  11px;
+  --t-overline: 10px;
+}
+
+/* ─── Semantic typography classes ──────────── */
+
+.display, h1.display {
+  font-family: var(--font-display);
+  font-size: var(--t-display);
+  font-weight: 500;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  color: var(--fg-1);
+}
+
+h1, .h1 {
+  font-family: var(--font-display);
+  font-size: var(--t-h1);
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--fg-1);
+}
+h2, .h2 {
+  font-family: var(--font-display);
+  font-size: var(--t-h2);
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: var(--fg-1);
+}
+h3, .h3 {
+  font-family: var(--font-display);
+  font-size: var(--t-h3);
+  font-weight: 500;
+  line-height: 1.25;
+  letter-spacing: -0.025em;
+  color: var(--fg-1);
+}
+h4, .h4 {
+  font-family: var(--font-display);
+  font-size: var(--t-h4);
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--fg-1);
+}
+
+p, .body {
+  font-family: var(--font-display);
+  font-size: var(--t-body);
+  font-weight: 500;
+  line-height: 1.65;
+  color: var(--fg-2);
+}
+.body-lg { font-size: var(--t-body-lg); line-height: 1.6; }
+.body-sm { font-size: var(--t-body-sm); }
+
+.label {
+  font-family: var(--font-display);
+  font-size: var(--t-label);
+  font-weight: 500;
+  color: var(--fg-1);
+}
+
+.caption {
+  font-family: var(--font-body);
+  font-size: var(--t-caption);
+  font-weight: 500;
+  color: var(--fg-2);
+}
+
+.overline {
+  font-family: var(--font-body);
+  font-size: var(--t-overline);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-2);
+}
+
+/* ─── Helpers ─────────────────────────────── */
+.text-green { color: var(--symbo-green); }
+.text-blue  { color: var(--symbo-blue); }
+.text-ink   { color: var(--ink); }
+.text-muted { color: var(--fg-2); }
+.text-on-dark { color: var(--fg-on-dark); }
+.text-on-dark-2 { color: var(--fg-on-dark-2); }
+
+</style>
+<script id="symbo-ds-bundle">
+/* @ds-bundle: {"format":4,"namespace":"SymboDesignSystem2_1f09ed","components":[],"sourceHashes":{},"inlinedExternals":[],"unexposedExports":[]} */
+
+(() => {
+
+const __ds_ns = (window.SymboDesignSystem2_1f09ed = window.SymboDesignSystem2_1f09ed || {});
+
+const __ds_scope = {};
+
+(__ds_ns.__errors = __ds_ns.__errors || []);
+
+})();
+
+</script>
+<!-- Phosphor icons (Symbo DS icon set) -->
+<script defer src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<style>
+/* Aliases over Symbo DS tokens. Black replaces Symbo blue by request. */
+:root{
+  --dark:#1c1c1c; --hero:var(--ink-near-black,#141414);
+  --muted:var(--gray-700,#3c4a40); --muted-2:var(--gray-500,#4f4f4f);
+  --g:var(--symbo-green,#00c98f); --g-dark:var(--symbo-green-dark,#006d41); --g-deep:var(--symbo-green-deep,#004a2e);
+  --g-tint:var(--green-tint-12,rgba(0,209,130,.12)); --g-soft:var(--green-tint-soft,#ccf6e6);
+  --line:var(--border-line,#e4e2e1); --sage:var(--border,#bacbbd); --sage-soft:rgba(186,203,189,.4);
+  --surf:var(--surface,#f6f3f2); --surf-2:var(--surface-2,#fcf9f8);
+  --yellow:var(--accent-yellow,#fdd340); --amber:var(--accent-amber-deep,#715b00);
+  --fd:var(--font-display,'Inter Tight',system-ui,sans-serif); --fb:var(--font-body,'Inter',system-ui,sans-serif);
+  --grad:var(--grad-cta,linear-gradient(180deg,#006d41 0%,#00d182 100%));
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;height:100%}
+p,h1,h2,h3,h4{margin:0;font:inherit;color:inherit;letter-spacing:inherit;line-height:inherit}
+body{background:var(--surf);color:var(--ink);font-family:var(--fb);font-size:13px;line-height:1.45;-webkit-font-smoothing:antialiased;overflow:hidden}
+a{color:var(--g-dark)} a:hover{color:var(--ink)}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+button:disabled{cursor:not-allowed}
+:focus-visible{outline:2px solid var(--g);outline-offset:2px;border-radius:6px}
+.ph,.ph-bold,.ph-fill{line-height:1}
+
+/* ---------- Layout: levers | phone | outcome ---------- */
+.app{display:grid;grid-template-columns:340px minmax(0,1fr) 340px;height:100vh}
+.side{overflow-y:auto;padding:18px 16px 24px;display:flex;flex-direction:column;gap:10px;min-width:0;scrollbar-width:thin}
+.stage{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:16px;min-height:0}
+.stage-cap{font-size:12px;color:var(--muted-2)}
+
+.brand{display:flex;align-items:center;gap:10px;padding:2px 2px 8px}
+.brand img{height:22px;width:auto;display:block}
+.brand span{white-space:nowrap;font-size:12px;color:var(--muted-2);border-left:1px solid var(--line);padding-left:10px}
+.over{font-family:var(--fb);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding:8px 2px 0;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-xs)}
+details.lv>summary{list-style:none;display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;min-height:48px}
+details.lv>summary::-webkit-details-marker{display:none}
+.lv-txt{flex:1;min-width:0;display:flex;flex-direction:column}
+.lv-t{font-family:var(--fd);font-size:13.5px;font-weight:600;color:var(--ink)}
+.lv-s{font-size:12px;color:var(--muted-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chev{width:8px;height:8px;border-right:1.6px solid var(--muted-2);border-bottom:1.6px solid var(--muted-2);transform:rotate(45deg);transition:transform .2s;flex:none;margin:0 3px 3px 0}
+details[open]>summary .chev,[aria-expanded="true"]>.chev{transform:rotate(-135deg);margin:3px 3px 0 0}
+.lv-body{padding:0 14px 6px;border-top:1px solid var(--line)}
+
+/* ---------- Lever controls (DS form styles) ---------- */
+.ctl{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px 10px;padding:9px 0;border-top:1px solid var(--line)}
+.ctl:first-child{border-top:0}
+.ctl-l{font-family:var(--fb);font-size:12px;font-weight:500;color:var(--muted)}
+.ctl-v{font-family:var(--fd);font-weight:600;font-size:12.5px;color:var(--ink)}
+.in{height:32px;width:150px;border:1px solid var(--line);border-radius:8px;padding:0 10px;font-family:var(--fd);font-size:13px;background:#fff;color:var(--ink)}
+.in:focus{outline:none;border-color:var(--g);box-shadow:0 0 0 3px rgba(0,201,143,.18)}
+.seg{display:inline-flex;flex-wrap:wrap;background:var(--surf);border-radius:8px;padding:2px;gap:2px}
+.seg button{border:0;background:none;border-radius:6px;padding:4px 9px;font-family:var(--fd);font-size:12px;font-weight:500;color:var(--muted);min-height:28px}
+.seg button[aria-checked="true"]{background:#fff;color:var(--ink);font-weight:600;box-shadow:var(--shadow-sm)}
+.tg{position:relative;width:36px;height:20px;border-radius:9999px;border:0;background:#d7d3d1;padding:0;transition:background .2s;flex:none}
+.tg::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2);transition:transform .2s}
+.tg[aria-checked="true"]{background:var(--g)}
+.tg[aria-checked="true"]::after{transform:translateX(16px)}
+.stp{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:8px;background:#fff}
+.stp button{width:28px;height:28px;border:0;background:none;font-size:15px;font-weight:600;color:var(--ink)}
+.stp output{min-width:24px;text-align:center;font-family:var(--fd);font-weight:600}
+.rng{width:100%;accent-color:var(--g)}
+
+/* ---------- Presets ---------- */
+.pr-item+.pr-item{border-top:1px solid var(--line)}
+.pr{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:0;background:none;padding:9px 12px;min-height:46px;border-radius:12px}
+.pr-k{width:24px;height:24px;border-radius:6px;background:var(--surf);font-family:var(--fd);font-weight:600;font-size:12px;display:grid;place-items:center;flex:none}
+.pr[aria-pressed="true"] .pr-k{background:var(--dark);color:#fff}
+.pr-n{font-family:var(--fd);font-size:13px;font-weight:600;flex:1;min-width:0}
+.pr-who{font-size:12px;color:var(--muted-2);font-weight:400}
+.pr-d{padding:0 12px 12px 46px;display:flex;flex-direction:column;gap:6px}
+.pr-d p{font-size:12px;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:9999px;font-family:var(--fd);font-size:11.5px;font-weight:500;background:#fff;border:.6px solid var(--sage);color:var(--ink);white-space:nowrap}
+.chip.svc{background:var(--surf);border-color:transparent}
+.chip.add{background:var(--g-tint);border-color:transparent;color:var(--g-dark);font-weight:600}
+.chip.rem{background:var(--surf);border-color:transparent;color:var(--muted-2);text-decoration:line-through}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:9999px;font-family:var(--fd);font-size:11px;font-weight:600;white-space:nowrap}
+.b-green{background:var(--g-tint);color:var(--g-dark)}
+.b-dark{background:var(--dark);color:#fff}
+.b-review{background:rgba(253,211,64,.25);color:var(--amber)}
+.b-plain{background:#fff;border:.5px solid var(--line);color:var(--muted)}
+.dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
+
+/* ---------- Buttons (DS) ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:8px;font-family:var(--fd);font-weight:600;font-size:13px;padding:8px 14px;min-height:34px}
+.btn-sm{padding:5px 10px;font-size:12px;border-radius:7px;min-height:28px}
+.btn-dark{background:var(--dark);color:#fff}
+.btn-ghost{background:var(--surf);color:var(--ink)}
+.btn-primary{background:var(--grad);color:#fff;border:1px solid #00af6d;box-shadow:0 6px 16px -8px rgba(0,209,130,.5)}
+.btn-outline{background:#fff;color:var(--g-dark);border:1.5px solid var(--g)}
+.btn-lg{min-height:48px;font-size:15px;border-radius:10px;width:100%}
+
+/* ---------- Outcome panel ---------- */
+.wc{padding:14px}
+.wc.flash{animation:wcflash .9s ease-out}
+@keyframes wcflash{0%{background:var(--g-tint)}100%{background:#fff}}
+.wc-line{font-family:var(--fd);font-size:14.5px;font-weight:600;line-height:1.4;color:var(--ink);text-wrap:pretty}
+.ba{display:grid;grid-template-columns:48px minmax(0,1fr);gap:6px 8px;margin-top:10px;align-items:center}
+.ba-k{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted-2)}
+.wc details{margin-top:10px;border-top:1px solid var(--line)}
+.wc summary{list-style:none;display:flex;align-items:center;justify-content:space-between;padding:9px 0 2px;cursor:pointer;font-family:var(--fd);font-weight:600;font-size:12.5px;min-height:36px}
+.wc summary::-webkit-details-marker{display:none}
+.kv{display:grid;grid-template-columns:96px minmax(0,1fr);gap:4px 10px;margin:6px 0 0;font-size:12px}
+.kv dt{color:var(--muted-2)}
+.kv dd{margin:0;display:flex;flex-wrap:wrap;gap:4px;align-items:center;font-weight:500;min-width:0}
+.kv .chip{white-space:normal}
+.why{margin:8px 0 0;padding-left:16px;font-size:12px;color:var(--muted)}
+.why li{margin:3px 0}
+.mini{font-size:11.5px;color:var(--muted-2)}
+.mono{font-family:var(--font-mono,ui-monospace,Menlo,monospace);font-size:11.5px}
+.sl{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-top:1px solid var(--line);font-size:12px}
+.sl:first-child{border-top:0}
+.sl b{font-family:var(--fd);font-weight:600}
+.ev-t{width:100%;border-collapse:collapse;font-size:11.5px}
+.ev-t td{padding:5px 0;border-top:1px solid var(--line);vertical-align:top}
+.ev-t td+td{padding-left:8px}
+.ev-sub{border-top:1px solid var(--line)}
+.ev-sub>summary{list-style:none;display:flex;justify-content:space-between;align-items:center;padding:9px 0;cursor:pointer;font-family:var(--fd);font-weight:600;font-size:12.5px;min-height:38px}
+.ev-sub>summary::-webkit-details-marker{display:none}
+.ev-log{list-style:none;margin:0 0 8px;padding:0;max-height:220px;overflow:auto;font-size:11.5px}
+.ev-log li{display:grid;grid-template-columns:64px minmax(0,1fr);gap:8px;padding:4px 0;border-top:1px solid var(--line)}
+.note{font-size:11.5px;color:var(--muted-2);padding:4px 2px}
+
+/* ---------- Phone ---------- */
+.phone{width:408px;height:min(852px,calc(100vh - 48px));background:var(--hero);border-radius:52px;padding:9px;box-shadow:var(--shadow-lg);flex:none}
+.screen{position:relative;width:100%;height:100%;border-radius:44px;overflow:hidden;background:#fff;display:flex;flex-direction:column;font-family:var(--fd);color:var(--ink)}
+.island{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:100px;height:28px;border-radius:20px;background:#000;z-index:6}
+.sbar{height:50px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:6px 30px 0 36px;font-size:15px;font-weight:600}
+.sb-i{display:flex;align-items:center;gap:6px}
+.bars{display:flex;align-items:flex-end;gap:2px;height:11px}
+.bars i{width:3px;background:var(--ink);border-radius:1px}
+.bars i:nth-child(1){height:4px}.bars i:nth-child(2){height:6px}.bars i:nth-child(3){height:8px}.bars i:nth-child(4){height:11px}
+.batt{width:24px;height:12px;border:1.5px solid var(--ink);border-radius:4px;padding:1.5px;position:relative}
+.batt::before{content:"";display:block;height:100%;width:78%;background:var(--ink);border-radius:1.5px}
+.app-h{flex:none;display:flex;align-items:center;gap:10px;padding:4px 16px 10px}
+.back{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:#fff;display:grid;place-items:center;font-size:16px}
+.lb-mark{display:flex;align-items:center;gap:7px;font-weight:700;font-size:17px;letter-spacing:-.02em;flex:1}
+.lb-mark i{width:18px;height:18px;border-radius:5px;background:var(--yellow);position:relative;display:inline-block}
+.lb-mark i::after{content:"";position:absolute;inset:5px;border-radius:2px;background:var(--dark)}
+.help{border:1px solid var(--line);background:#fff;border-radius:9999px;padding:5px 12px;font-size:12.5px;font-weight:600;min-height:32px}
+.prog{flex:none;display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:0 16px 12px}
+.prog span{height:3px;border-radius:2px;background:var(--dark)}
+.prog span:last-child{background:var(--yellow)}
+.scroll{flex:1;min-height:0;overflow-y:auto;padding:0 16px 20px;scrollbar-width:none}
+.scroll::-webkit-scrollbar{display:none}
+.pg-t{font-size:22px;font-weight:600;letter-spacing:-.02em;margin:2px 0 2px}
+.pg-s{font-size:12.5px;color:var(--muted-2);font-family:var(--fb)}
+
+.loan{border:1px solid var(--line);border-radius:16px;padding:14px;margin-top:12px;transition:background .6s}
+.loan.flash{animation:lflash .9s ease-out}
+@keyframes lflash{0%{background:rgba(253,211,64,.18)}100%{background:#fff}}
+.loan-top{white-space:nowrap;display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--muted-2);font-family:var(--fb)}
+.loan-amt{font-size:30px;font-weight:600;letter-spacing:-.03em;margin:2px 0 10px}
+.loan-g{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;margin:0;padding-top:10px;border-top:1px solid var(--line)}
+.loan-g dt{font-family:var(--fb);font-size:11.5px;color:var(--muted-2)}
+.loan-g dd{margin:1px 0 0;font-size:14.5px;font-weight:600}
+.loan-rcv{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--surf);font-size:12.5px}
+.loan-rcv b{font-size:15px;font-weight:600}
+.li-row{display:flex;align-items:center;gap:10px;padding:12px 2px;border-bottom:1px solid var(--line);font-size:13px}
+.li-row .ph{font-size:18px;color:var(--muted)}
+.li-row span{flex:1}
+
+/* ---------- Symbo embedded module ---------- */
+.sy{margin-top:14px;border:1px solid rgba(0,201,143,.5);border-radius:14px;background:#fff;overflow:hidden;box-shadow:0 10px 24px -16px rgba(0,209,130,.55);transition:opacity 260ms ease,transform 260ms ease}
+.sy::before{content:"";display:block;height:3px;background:var(--grad-bottom-bar,linear-gradient(90deg,#00d182 25%,#fdd340 84%))}
+.sy.updating{opacity:.25;transform:translateY(3px);transition-duration:110ms}
+.sy-h{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:0;background:rgba(0,209,130,.08);padding:12px 14px;min-height:58px}
+.sy-ic{width:34px;height:34px;border-radius:50%;background:#fff;color:var(--g-dark);border:1.5px dashed rgba(0,201,143,.7);display:grid;place-items:center;font-size:17px;flex:none;transition:background .25s,color .25s}
+.sy.on .sy-ic{background:var(--g);color:#fff;border:1.5px solid var(--g);box-shadow:0 0 0 4px rgba(0,209,130,.18)}
+.sy-on{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:9999px;background:var(--g);color:#fff;font-size:11px;font-weight:600}
+.sy-ht{flex:1;min-width:0}
+.sy-t{display:flex;align-items:center;gap:6px;font-size:14.5px;font-weight:600}
+.sy-s{font-family:var(--fb);font-size:12px;color:var(--muted-2);margin-top:1px}
+.sy-note{margin:0 14px 10px;padding:8px 10px;border-radius:8px;background:rgba(253,211,64,.22);color:var(--amber);font-size:12px;font-family:var(--fb)}
+.rows{list-style:none;margin:0;padding:0}
+.row{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:4px 10px;padding:11px 14px;border-top:1px solid var(--line);align-items:start}
+.row.on{background:rgba(0,209,130,.06)}
+.row.new{animation:rnew 1.3s ease-out}
+@keyframes rnew{0%{background:var(--g-tint)}100%{background:#fff}}
+.row-ic{width:30px;height:30px;border-radius:50%;background:var(--g-tint);color:var(--g-dark);display:grid;place-items:center;font-size:15px}
+.row.svc .row-ic{background:var(--surf);color:var(--ink)}
+.row-n{display:flex;align-items:center;gap:2px;font-size:13.5px;font-weight:600;line-height:1.25}
+.info{position:relative;width:24px;height:24px;border:0;background:none;padding:0;display:grid;place-items:center;flex:none}
+.info::before{content:"";position:absolute;inset:-8px}
+.info span{width:16px;height:16px;border-radius:50%;border:1.2px solid var(--muted-2);color:var(--muted-2);font:italic 700 10.5px/14px Georgia,serif;text-align:center}
+.row-m{font-family:var(--fb);font-size:11.5px;color:var(--muted-2);margin-top:1px}
+.row-w{font-family:var(--fb);font-size:11.5px;color:var(--g-dark);margin-top:2px;display:flex;gap:5px;align-items:baseline}
+.row-w::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--g);flex:none;transform:translateY(-1px)}
+.row-side{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+.row-p{font-size:13.5px;font-weight:600;font-variant-numeric:tabular-nums}
+.row-p small{white-space:nowrap;display:block;text-align:right;font-family:var(--fb);font-size:10.5px;color:var(--muted-2);font-weight:500}
+.add,.rm{position:relative;min-height:30px;border-radius:7px;padding:0 12px;font-family:var(--fd);font-size:12.5px;font-weight:600}
+.add::before,.rm::before{content:"";position:absolute;inset:-7px -4px}
+.add{display:inline-flex;align-items:center;gap:4px;background:var(--grad);color:#fff;border:1px solid #00af6d;box-shadow:0 6px 14px -8px rgba(0,209,130,.6)}
+.rm{background:none;border:0;color:var(--muted-2);text-decoration:underline;text-underline-offset:2px;padding:0 2px;min-height:22px}
+.added{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:var(--g-dark);background:var(--g-tint);border-radius:9999px;padding:3px 9px}
+.si{grid-column:2/4;display:flex;gap:6px;margin-top:6px}
+.sip{position:relative;flex:1;border:1px solid var(--line);border-radius:8px;background:#fff;padding:5px 2px;min-height:40px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12.5px;font-weight:600;line-height:1.2}
+.sip small{font-family:var(--fb);font-size:10.5px;color:var(--muted-2);font-weight:500}
+.sip[aria-checked="true"]{border-color:var(--dark);box-shadow:inset 0 0 0 1px var(--dark)}
+.sip .sg{position:absolute;top:-6px;right:-4px;font-size:9.5px;font-weight:600;font-family:var(--fb);background:var(--g);color:#fff;border-radius:9999px;padding:0 5px;line-height:14px}
+.vas{border-top:1px solid var(--line)}
+.vas>summary{list-style:none;display:flex;align-items:center;gap:8px;padding:11px 14px;cursor:pointer;min-height:46px}
+.vas>summary::-webkit-details-marker{display:none}
+.vas-t{flex:1;font-size:13px;font-weight:600}
+.vas .row:first-child{border-top:1px solid var(--line)}
+.tot{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 14px;border-top:1px solid var(--line);background:var(--surf-2)}
+.tot b{font-size:14.5px;font-weight:600}
+.tot span{font-family:var(--fb);font-size:11.5px;color:var(--muted-2)}
+.pw{white-space:nowrap;display:flex;align-items:center;gap:6px;padding:9px 14px 11px;border-top:1px solid var(--line);font-family:var(--fb);font-size:11px;color:var(--muted-2)}
+.pw img{height:12px;width:auto;display:block}
+
+.foot{flex:none;padding:10px 16px 28px;border-top:1px solid var(--line);background:#fff;position:relative;display:flex;flex-direction:column;gap:8px}
+.foot::after{content:"";position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:130px;height:5px;border-radius:3px;background:var(--dark)}
+.foot-l{display:flex;justify-content:space-between;font-family:var(--fb);font-size:12px;color:var(--muted-2)}
+.foot-l b{color:var(--ink);font-family:var(--fd)}
+.foot-b{display:flex;gap:8px}
+.cta{flex:1;min-height:50px;border-radius:12px;border:0;background:var(--dark);color:#fff;font-family:var(--fd);font-weight:600;font-size:15px}
+.cta-2{flex:0 0 auto;min-height:50px;border-radius:12px;border:1px solid var(--line);background:#fff;font-family:var(--fd);font-weight:600;font-size:13.5px;padding:0 14px}
+
+/* ---------- Sheets ---------- */
+.sheet-wrap{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;justify-content:flex-end;background:rgba(20,20,20,.45);animation:fade .2s ease}
+.sheet{background:#fff;border-radius:22px 22px 0 0;max-height:86%;display:flex;flex-direction:column;animation:up .25s ease}
+@keyframes fade{from{opacity:0}} @keyframes up{from{transform:translateY(24px);opacity:.6}}
+.grip{width:36px;height:4px;border-radius:2px;background:var(--line);margin:8px auto 0}
+.sh-h{display:flex;gap:10px;align-items:flex-start;padding:12px 18px 10px}
+.sh-k{font-family:var(--fb);font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--g-dark)}
+.sh-t{font-size:18px;font-weight:600;letter-spacing:-.01em;margin-top:2px}
+.sh-x{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:#fff;font-size:18px;flex:none;margin-left:auto}
+.sh-b{overflow-y:auto;padding:0 18px 4px;min-height:0;font-family:var(--fb)}
+.sh-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 12px;padding:10px 12px;border-radius:10px;background:var(--surf)}
+.sh-meta.two{grid-template-columns:repeat(2,1fr)}
+.sh-meta dt{font-size:11px;color:var(--muted-2)}
+.sh-meta dd{margin:1px 0 0;font-family:var(--fd);font-size:13px;font-weight:600}
+.sh-b h3{font-family:var(--fd);font-size:12.5px;font-weight:600;margin:10px 0 4px}
+.sh-b ul{margin:0;padding-left:18px;font-size:12.5px;color:var(--ink)}
+.sh-b li{margin:3px 0}
+.sh-fine{font-size:11.5px;color:var(--muted-2);margin:10px 0 4px}
+.sh-f{padding:12px 18px 28px;display:flex;flex-direction:column;gap:8px}
+.rec{list-style:none;margin:0;padding:0;counter-reset:r}
+.rec li{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-top:1px solid var(--line);font-size:13px;counter-increment:r}
+.rec li:first-child{border-top:0}
+.rec li span::before{content:counter(r) ". ";color:var(--muted-2)}
+.rec small{display:block;color:var(--muted-2);font-size:11.5px;padding-left:16px}
+.toast{position:absolute;left:16px;right:16px;bottom:100px;z-index:30;background:var(--dark);color:#fff;border-radius:12px;padding:12px 14px;font-size:13px;font-weight:500}
+
+/* ---------- Narrow screens: phone first, levers in drawers ---------- */
+.dt{display:none}
+@media (max-width:1180px){
+  body{overflow-y:auto;overflow-x:hidden}
+  .app{grid-template-columns:1fr;height:auto;min-height:100vh}
+  .stage{min-height:100vh;padding-bottom:80px}
+  .side{position:fixed;top:0;bottom:0;width:min(360px,92vw);background:var(--surf);z-index:70;box-shadow:var(--shadow-lg);transition:transform .25s ease;visibility:hidden}
+  #levers{left:0;transform:translateX(-104%)} #outcome{right:0;transform:translateX(104%)}
+  #levers.open,#outcome.open{transform:none;visibility:visible}
+  .phone{height:min(852px,calc(100vh - 120px))}
+  .dt{display:flex;position:fixed;bottom:16px;left:50%;transform:translateX(-50%);gap:8px;z-index:60}
+  .dt .btn{min-height:44px;box-shadow:var(--shadow-md)}
+  .scrim.open{position:fixed;inset:0;background:rgba(20,20,20,.3);z-index:65}
+}
+@media (max-width:460px){
+  .stage{padding:0 0 70px;justify-content:flex-start}
+  .stage-cap{display:none}
+  .phone{width:100%;height:calc(100vh - 70px);border-radius:0;padding:0;background:none;box-shadow:none}
+  .screen{border-radius:0} .island{display:none}
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ============ LEFT: customer presets + profile levers (presenter) ============ -->
+  <aside class="side" id="levers" aria-label="Customer profile levers">
+    <div class="brand"><img id="symbo-logo" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAeAAAAB/CAYAAAA3kxG3AAAQAElEQVR4AexdCXwbxbn/fys5gaSQUKAthCMtUFqgQDksW+YILVcoh2VqWsorhR5QjoJloBelMZS2lMMyoZzt68njUQyWE44UKCWQSLacBAgFygMKhKucJYEQklja732zjhM7tqVZaSWt5NnfjHZ35rvmr939ds61YDaDgEHAIGAQMAgYBEqOgHHAJYfcKDQIGAQMAgYBgwAwvh2wuQIMAgYBg4BBwCBQJgSMAy4T8EatQcAgYBAwCIxvBMa3A+6dvTkWXLUXFse2GYeXgSmyQcAgYBAwCJQRgfHlgPnBIPo6DkLqqtORijEoswITrMeQwWvOeSq2xsnv7dizjP+JUW0QMAgYBAwC4wABq+rL2NZm4Z7ZE8XBvoC+x/rB/JB0fd8wRrknOPnES4WeJbbiwbYgWGSMwWCSKxQBY7ZBwCBgECgzAtXrgBd37IC+WAozp7yALTOrBefpEt2GqzBpSj/6pi5zZJmmarf4GXqDgEHAIGAQGAOB6nLAfR1fQW/s11JzZWR4GRi1Uu4dJBYYeDtH1vqm6o7rRccs3HZboEDBht0gUA4EjE6DgEHABwhUtgNe+KvNpD+3WZxhm0SW5uNbQTir+Ljyd0VHG3Z8NS16Vzk2LIrNkDQTDAIGAYOAQcAgoIVA5TlgNXJ54TXbiuN7FDUT3pP+3NukpLMklits6thg40GxidHX8R0o++69YnK5DDJ6DQIGgSwImCyDgE8QqBwH3Df7GHFwL4AyL6Mm/argt7dE/wXmmxz7ptYsc+xNXfNJ/xlpLDIIGAQMAgaBciPgbwec6miXGuX/iiNbC87MFbDUQKrNZV8BgbcUI8Xe9PNiv6oZq3LMBpt+Y8HFBIOAQaA8CBitPkLAXw74kdlbi8M9E32xPsdpgaPSr/tVwatGYmUHZlWO76HP6Td+C72xsyR+ubILZaw3CBgEDAIGgXwRKL8DXnT1HuJw9xZnlEZ/5k1xuNeCsX++BaoQvq1A+LXETudFoy92hoPBg7GpFWK/MdMgYBAwCFQeAj6zuHwOONVxsjifD2Dz4+JwHxVnNH6n9DCuczCYjNcdTBLyUuKzC8WYYxAwCBgEDALeIlBaB5yK/VVqeveJk2GA/yhFmSR7kr0JCgHGRNlNQtD+h4NRX0xhdYtZiUtQMcEgYBAwCFQZAsV1wGoJx1SsTfp1E45DAY6Qmt5hPsCwTWxoQ22LhVCUnDhvhaqBSzrdJXn+CAyF1Ynom5IR/NR61QrL7/jDOGOFQcAgYBAwCBSCgPcOeHFsH6Q6jhCHYTuOA5gl/bphlHdbK+rvBehIx9mGohfL/mIQSU0cA1tbm+2khVqOkT2B8HnJEB68Ins/hG3EiFmC5U2CLUu80MFZzYuG2QwCBgGDgEGg0hDwzgE/GpsqTmEVMlgizcp/FSBIYjnDh6J8peNMQ9GJshfn26IcqiRrhNroYwM80e1lr8qyUrgkDnHakuAmeEx7qYOz+qJTKtaP25pVDd5jFUacQcAgYBAwCBQLAe8c8BosEiM3lVjusBhMeyEwaStxnJt5Zkwoupkjj609pBZ6hGdyvREUxPT6o7wRZaQYBAwCBgGDQCkQ8M4BE3YuhcGj6mBEYeNMcZCqP3d/1LU8jv1OXzUqbaGJdec8hbrW+xxdH5u6qaMXuLNQsQXzs3VxwTKKKsAINwgYBAwCBoGhCHjngIdKLc3xn2HzKY4jrIt2oD56fWnUDtHyyVNXO3pD0WMdO4A2AH+W+IpEEwwCBgGDgEHAIDAmApXkgN+WUjzvOLqBkcsno771j5LmnzAwuOtksXF7rFqhmuOfB+F5/xhoLCkXAkavQcAgYBDYGIFKcMArQf3bSJ/ujuLYdtq4AL49P6RttWNvbXQnx36LvuFbW41hBgGDgEHAIFByBPzpgJlmge0viwNTfbqbofb7rxetTxcl2JT9+7f8ySkPB7Z3ygaKl0CzUWEQGB2BGcdsBRVHz/U41X/irHDkKv9ZZSwabwj4xwETXQWicx0nVddyCerOu6Mq/4y6c15xyhZqaXLKCrpCyn2VlLU4g8ZEsAkGgREI9PMkWht8SdLVFDvZjaMQbjqIgS+OoxL7t6h1kc8i3HiGxPM2iqegvvmj/jXcG8vK6YClT5d6MQFbOI6otuV81LbM9qZYGlIWXzYFvVfVOTHZfjB6YqdIbHDO+zpK9zGIUMv3pdznCwaTwfQJgHoBPIZq2hqO3gENTXVoaJxJ4cgaiZw1NkR6UNfU4PCEG9V3nwt3Eoc2T6GGyDw3UR4Aqh+/bP+EVd94tht7rXDjrS6N3RQNkYtc8lQ2eahpOwI/5FUh5Dq+K9d/pJtv1Tf9As59ou6VdTHctKNXtpZVzsyZE52yhZu+JJhtuP8tPEWg6yReuVH8PVH6nSG0jzr8B0T2Kms5PFZePgdc2/IxhFrq8fnoco/LlFtcKpZBZuK7IKvHiQGaDwu/l7jQOWfug6Lpjf13bmEeUtS1vOFgEop+HkTXeSi5PKLk4SE30BrimheJuYeY7hFDJkjMHhh1ZPFChwf0qMhIS3wvO1OO3L91rgBjU4lH6kZ5AKzMIbWo2Ux0ja6tis62rL+4NYgYFyMc2cMtX6XSW0H7Vx7brpbX1b6m1P80VmTiHznXvHOvqPtFIvgFufYzKuLA5q09tr344sTxiu3v0YpNVjllA+e71O/eDr+Nx0Rehuob1WJPqPStPA7Y5oswdBnIUqGY6vibOFZpfRJXCxCyb5ZQfBN9sXeFZ1Z20iLk1racVQSppRFZH/mh3CTPSE3jRVGoHG4urIUsa7AkdzORqd6c35T9Q5hxyiaS5iow299zxQC5TlSNxCWTF+RSxk7XcrYJzHXNIwwE3Ce7qg8Ubrqdmb5WYQWVv0euQ8CiTFpd+2/LtfEQmn2+8l24cZbg/Syt2GS14L2ZRHUPy86TYIHoCMFBngeNCadm7InY0guxSq9SNBK9Jr+lC0uvmCxO9B2A3ff7MKZCze/t67gHqtlaTkwYA4HDvz6Zwo2vE+GXQrGLxGIEVQs4iNau+JAamuaiLnKStpKeOf8Q2r9L1A4WuFWb2FvCY92I40DwY+jszLjhGUK7jTwsq6JGMaRMww9rI1vK/T9zeGJFnkk5cBC9mk5b4cgtaDhmdz+VQmy6jMKRFQRqE7xLsDgThZ2acThyHw5o+pSfsNCxpTwOWMcyr2gWx7bB6qBqSiysQ595pjRb/wdKnle2VZEcufF+QCtXCs708ZIVi/kYsnCz3PBvoSFygI5eJlyrQzdIw4xmcfKfHTwvxV7K87LoUS0HstMKT2NB51talGMS8RFoOP6EMbMrOSMc+RgF8bYUYZLEqgnSlHcicfAJ3Wu/qAUPHb+nXLdvi00/ED2bSyx1OIxs/pc8h65C6Phivfy7LlMuhup2wKrmm4GXtW0LNtQFlgvXcZVvhRuvlRvvsjIWeivpy1wgD6Lv5rQhEe8C6Ha42KwAStcdMNAfO82FeRlOxj15QSC2/4KGY1VzoQv1FUDKFKkAK/M2UV37VkPkD2hrK8fznKi+qZcC9lIpgKqdy658QZ5DrWLLM6iQEdTl+MNK9++sDl7huTLGuejr+KnncitUoNz4tzHoTF+Yz1APgZym8ISAq75gqQWfhdCJJanZEzBHCiA7+dUIQui+rziLXOLAP7NkV15WQ+SnRHxD5RnuzmK5Rk/GvUuPd8dVIHV986bSdfEMiEMFSvKcnSj9htTIn/FcsMcCLY/l+Ufcwvb9AJxRFIOYv1EUuZUmdEbzR5jR5AuziecjGe/RsmV+5+vM7MoJU+DDu7RkF0IUjnxB2F31Y9mUOU14vAzTrHCTP16oPCiV1A6/7YGYShBBRLgNA9dQ8e1tiDSJk/t3afp58ypOULh2ESfs6wGG1euAa+jX8gcUK3wKqau/VizhFSH3wKZtaG36fbE1ILHcIcMZnOrKiInLfyv0/5GoGWg/1BZ3DqJF/C1NYxwyefn5FhJz1X/gnHv1w+BrUd/4Ra/klUXOjBlBefi+ILq3lzhuAoFvLHph1VxehlooaUrRdRWu4DBqiMyTJumyzukfqxjV6YAfbFNvP8VtFmH7h2OB6pP04pph8+F5KPgQjKeY+HvSb0mjxgnv1oDoTkUn8uUNW35zh2Xo7X4xN9kQivnzV4Pw0JCUnIcUxGLs1uxmcFROmesJ6punsbspMoye+O/W83t8QERqJLvHUksoLr3lvqJtusRxFmhnKxy5sGiFrot8Vpy8V61Bzzj3uTwTnD1wNwh/dY43pKkBiYUVh3Gk1NZ7/Dh1qzodcGF/lx43YXc8ce1H9Iirj0qa9v7gplREuJYp83Huie+ORPevx+SdPz/Nia5jFR0vD07nCbyF0L4qcczAa9KfGzMzSwYn4qr5fFUWko2zgpjSv/fGiV6cW1bmcjdy2OJir9a2v9QcChxZ7aZEHtIe0HQo2XavhxILFsVE31HXsla0+ZOicK3E/ALRbvkx5uA6oHFfsvBUDqrs2YS312OQjH/Guc974rs7+2T8aLknZzrHg2lrtt5pkD674Jy5e9Gr6TdyUpWYoDod8KZT7i4BjhaWr6QS6PGfinDjT9wYRcwtdiJ+tuvm0qc612J+93KpKW8nUXw+HS16n5W4IRDmY8mdI50o9DaycZ4e5QAVwfo7irBJn/TXXIhdjuDUJ13Q50fK2BIHHlech3l+Fmlxkc2uppppCS2UyM6sUteyVuztflGu94nM1mflxfVKt6pdXkt64usap5PtLJOrR78RFRNdyBZ2FQe79XoMpAN5I7KRp0tu6h+kF0xIZOzNhFkjCbVStpSXyoValCUiqk4HTMinedQ95MGaS5GKXQg13ck9d8VyEFkH6xovD5BL7J7uq3Xps9Ilu+6Wm/DTPGX1FHnz+bmi5Qw5e3WcT7R742qE7MPavMSTpX+0RZteg5DCTcs0yNaTcLC/FvP/sHp9QvEOiDLWk5U0r1KwVC/fny4eJCWU3HPH0/LieoG08KjFZ1a509wccEefnZoGlsYNZqcamavuU7lfN0Gi6xdYGC98VPLC+FIk4pdwGluBWPXxj1SaLYXRIE30N2cjKWVedTrgUiFIdI6outRZ6CMVewY9sRlY3LGDpFV3YD5Us4DPyAMk37fVsVXMm/eenYz/RJwxobfrb2MT6uVIjeESPcoBKnkYxQaOPPhVH6oA618zhDgevmt4K8BIMzxNsQIc9VRgsYTVH/95gI8qlviyyV1y59tyrU8W/f0StQKF024/zDGmXKqP3APCzDEJRs94hsFnqvsU8+atGZ2kgNS++Duc6P6U3LuuX4YZOAn1x32uAO2esRoH7BmU2AUWHkSGl0mtmMUZn4Qn2tSAHXkJ9E6JDyRpl4czcDWqt2xl6+l+QHRrP9yEFtKU1aX2hUbiGne134F+60LVuuKXB+kZVkPkNldMJSdus4jsR0qutpQKCS4GP1GtJ6bte1pNHs63X14YdkWy+3pPTn1L/AAAEABJREFUbMgmpKf7ammWPkZIMhK1A5H1uDZxEQmr1AGTalYsImwaoi3cjA+mrEZv7DGJ92twVARJINykPwc6FfdVf0s2gJn6d86WPyKPcciINLcJ9ZEj3bAQcYcbei9pmXGYl/K8lkXhpRsGB3kt3CfyOMOtJTWluTlAE9/SnYkwYBrhdV4eLO3g1IXxuzid3kUMcDGtEKBwpODWMxS4VacDXrXc1SILBWKYjZ1A2FPioU6tOBV7E32xDvR27JmNyc95NrGrjwT4uSzDbEvc9ZKcu+mjmmqFIz8XnryDNGW7aj6zYZfzxXKqPLDe9eN8Squh8bfyJ+wqsbpDr8updgWiYb2aVlMtt9QWw1jCifg2UIMntZk8Iuy78wXOWHUibaVE3XBIuT/gUJ0O+K3dWP6B9yT6LWwNxrkgXuo45N72r6Kn4yt+MzKrPTZcfwYwqzwfZTrNZoD2DSwX2dl5r53ccPx+0l95hG7xRddpSMz9P136ItFNBfpPL5Ls/MTWH/8ZZqqMro78SuiWyxv6g47bXq65S7WFER7nnrhc09oc3hOm7niWQT92Idgim//lgt5z0up0wCeckJGHm/+bpIj+Fxbf6jjjnvZ29M7eDvI08fxfLpfAfY+ZVC7V+eolxv+44N0cZKkFH1ywDJBanDl/4EjrN41k/DdalEUmIqIY6iPNRVajJ37mzIlE9j/1iA2VKwT6Sc2R12Zhm36lTVxMwmTXNUzkbvnR+sg3i2lSNtnV6YBVidOZ49SuYqJFUVDmZfR1LBOHvAyL2j/lR9vJIu1+XZoYnO/HMmSzyV77kqvuC7LpQRz+dTVCNZvY4Xn1zTvLm7p2ywcHbV9dC0QoZ1P4eiyt9za5af2JORiGgAW+dFiCyxMi0p5/zGwdiZ6uW1yqKA65krp6qz+pnW4kgvcf7dFUXr0OuOGCN8H4iyYOfiJTa9fuAJvK2jQyFiD2B/Z1Y+WNSGfeDfs2V8J6sRtMX7Kknxlnb0jIfWS9//4PclMNUqjRuum7Bs9y7glP4eE5hS/Hl1ORK4KPSv/3/7ri8JjYqo9cLv/TyR6LrRpxmQJaTKyGyAUCRFCiTliNiZmUDmHJaJbcJPew7WaczUfLNS2peh2w+rfrol+VXVFWLhK54zM81r1cu+BEk2lienm5Bzpo2ztI2BO/dvBQZy9NXhfhoGa1fGBu8tBjnxci7QFDzFS2t3Oxc8zAwFcRbvyvMQmKmTGjcSoTziimCl/KPqBxX027tMcxjCaPbWjPpSZwK+a7eCaMprAYaT1z/gHCEl3RFlmuBkTqys1FZ+UicJfvR2pb3ahv+9GyCrbpNTe2OwMd6punueEpNy0HrL3c2GBl0rn7wHZrnkABWqwtlxFHssvVmtvasj0gJND1CJ20uQei9EWoft+19K4wlHaqiygsdyAbWkvAEtHcgmwlzIDe9pZdirm+eraMoOKEMyjMHpExSoK8UB4/SnLRk6rfAYfOewaTp6mH//MFovkymFw9lAvU51t2BrueYE+UfpHCkTt9W6iNDVtwxz8k6X2JWoEZX85JOMV2NXeYP/jg6zlllpfgIxRY9WZJTVgx8cSS6vOTMiatKYA28cX5mi1dCxdq8zIWa9OWjZB012AoS1dZ9Ttg9cfvccJahKI7gcjVkoOK1YkWh4R/B9S1PC57AtKfgkVqvekPnfx1P+Nml7HzGZGr+pSOFif8AA6IVMKLDHPG1QhnovrI0mzXAJGtPThEHPqP8Ph9H2ST55O8iahvbCyJLQ2NZxPo9yXR5TMlct/8EwQLOTYCbi5kzWWpCWr3q3NP/Es5zCl7Nlv2ZbpGULjxbl1ar+hy/qFeKfKFnNqWWQhkPis12VlizyqJ2cK/wPip43D3b+0bRhi64AXs33K/5E1CYNIEh47oD8NoqvkkNfcNYnYz324oGl8gG4+Js3oQDZHvws9b6o5nxbwHJeoFwudwYLNaOH8EvRVuUqOrPzYiY8yEzO1jZvksQ5o846iPHFlss2iczve1wo1qTMJndPC1ycr/wycDy05uqqNHaBZJFH8tv34OC7vn65tH7lbD0xc8JuX4csAKhv3Of1pqspeI85wskcBWo7xZztsQJ+zgpIeiO6Mu+jPFkjXud3q/Q1fbcqrDR+hwZKG6N7un+5dSztc3lNLlkfQzEeN6Ckds1DeehoZm/Q8SuFRVCDkfvtehLvilpT09KibSbK9WFdISRaC/oGfuc1rEPiEiQt7NnjmL0NZmUX2j6kLaOydtNRE0NM6U+6OfQWfqFIthNyNxR/7NwpPenSqVCTULI6c6BhfWz5xTg3cEcm12akqbiBkzVEudJnnhZFbhIipcQt25c1AbPWpDPKuwKR+10agjKxQloGYrEJZL9P5rICj/xjXvqps1U6AlJNuNxOll8rB5GqGZmwNtVoEyvWNva7PlYXORtkCSZsL6pgiGbFL7Vc2m2w5Jynb4b3t5QLsZMJugEufVUrhR1Yq8V/u3x6eD6JOagvs06UpKRhT4LYUj72lEFpqByHSPGKnrEF5Dck7pWk0Ihd73UrTSBJv5cU1NOyKz9RaatJ6Q+edB50lxfCYkdPY74oy3gE07wrI+B6aEzywszJz589Ns0acLEzKMe1cKbLJCLaxv1Uf806QfqLlxmJWjnAxNkr7ejqHn4sAbh55nO2aLj0E51tLNZpR2Hu0Dr2sQ4aaDnFH0mjZYRO2apCUmY9W0u5kozRWFxHVYyMn4NNdchTDQJF8sxlJIEfzAaxxwKf6FupY3sP+5T6Cu5QCnmZr5ROQ7IKwU9rrRsbDreQbCblg0aHdlwjekJpC2GiI3yEO9vOtPL+h8i5h+qWH3OhLaAeEmZ1S0vEgohzB1XUb2HWE+FnZrz11ECTYi+hmYdb8aY9HaLfpxQOTTXplGbGu3PjBlxAlxv1e6K0GO3Cf/Jc73QC9srbEzO2nLWXjLu9q05SYkS/f6LbmlxgGXHHJRWNd6K2pbZjnOWNWMgT+CUVF9flKKDSEZ7+E1wanSoe71ymMBZpwuD/UPrXDjlV4+2DcYr3dk2+mr9SgHqIj4W5hxzFbygDxnICX3LzP9LjdV6Sm4hr+ZXevwXCsD7TIP5xx+ZoUjvwORVh88Ma5AYq6r+enDtVXeGdvYDYm4m7XLsxYyw3xWVoJKzUx09frV9DI5YHYxGtSv0Hlkl6oZh6KnoC66CzI8SaQ+B8Lzsq+ssKRzhZ3s/qrUmH4shnv+JSoGnUc2/q9sq2ql5r7BNu0rZdMLjCOxxlJT1QJ6DPgXkl1/1qQtLdnDc16WFwlVFi29QnuWOM+faxGPRRRq2o6BU8fKHp5O99o98e8PT6v+M7LwFBqa6rwqqeA9wytZRo4eAuVxwCTNeb2xYf1keuZWOVW49UOpFe+C/Vt2Rk3N9EosrZ3o+iVnVm8vD+HWYtgv/YHPUTjyajFk55TZ2/UIwI/mpFtHQGRp104YdOI6Nn/uEvH7QdD+XjIDaj3h/MqiPgQfYH1dUz4s64dX8iukN1zE3CP3wxveSDNSSo1AeRywKiXhXKRijFT73Uh1dGHxjTUq2URBQNovsc/Zy+SoMkNq3nvSNBZja+1HmanJ40KQyNtWHjou5vcJh0dByhP1SNR6MQy+SGq/i9Yn+PSAN1+9p5im28xbI//RK0LvOtCr6W5h2lRizsABaZWYN68qZxnkLPwGgo8J1v3S6lDgBzLorQ0izVEpECifA15fOjpKahURZFatRSr2mjjjC9DTEVqfbQ4qF4GFd7+Lnq44J+PqlUJ9VOBJDwtzsDx07vRQnp6onvhDcr0u1iPWonoPE/BrLcpyE4mjYwrWuzBjGhoirl5YrIHFWY7W0kGIY4FqldCirnaioLQ6fJUaIl35FpQIf3LPWwEcB46+OI4fLPeBAx4GwzbycLscFveKM1a14yh6Z9eZ2vEwjCryRPXRiSPeQ6LUYCkphSjoiy3Cr8LR4oRLXhOWWrDrtbCVsaNGwgO+/JrMqMZKYqLzJSa6UI60AjHaUdfUoEWs+n0Zutj+hxNxr1tXtMz0NREjIvfEffnYaFsB7S4T7NY8IR8dZeFJp08oi14NpX5zwBuZTO2gTI9TO+5rr645tBuVdDydcrKrgZPxzZhYWj8KLvnB8HruaS6TeuK/E5K7JBYaMhXpRBJdv4CLgYJk8UIdoCjAz+rQKRoOBLWWZlS04zAeRuGm4nZhTU37exnZoX86cdEW1xiqJp9jnzvgIUViCju14r7Ym9JMnUDfVeEhufkdLuo41pGV6khs2MfmY8EvffuH5VdQn3IluufxtKBqOguDKO8PD9DaLd7GnodPLmUpGXR2ofoItnZNslBdXvMzw01TNKRWlnUuptXQGBMbteZ7S5/5l7Ggs6L6K8XmNma7wU0UPApY7pG3g7QoiIwiBd68SILLJ5blGbQKa0tpQOU44EFUGFtLM3UYbCXEIfeL47wcizq0v3iBnlgDUu2/hRoAZvMcRxY4vGGPgzFhk/+gN5YW2dcg1b7foGqzLwICnZ0ZqHnEia6PMHBenhqmYPJmn86TNz+2ZNcyAl2cH7NwMebbyTm5vyEspL4MyfibzAG9puWBAnwR9U1fGzgc/hsMR77ATC3DU8c8W4Rk9x1j5vo1g6V23zMnCRdRWomOk0icDn6KCW6nWVnSovAyDv+6/ovpgPNZpQOhxfQ5HTo/0BBIb0YG8atY0rmilDZXngMeig4QBPgC2PwDpGIsTrMTqfYIbrtt5NzLh67aXhzq32BBmsPoW8PFjHJGEBkstRxahFSsYmsqqKQtGW9nDk4i4Ga3ZhPZj7jlKZTezmzaLjLy6stmiy8X3soOPbcnifFH3UIQ8c0j+g73bZ6SAXSb81eLQ6rV1Vc1dH2dLyARv0LKTiDorms8UPyV70cGDjR+B5yP1sh1eSHwbb/qsJKGIx+Tc9+2aFpiXPUEwpcB6sKOr0rtVRxy4sod8WhsqtR6P4tNrJfEWX8R+W2XinN/ZVTHnp88wzUWAj2dH9rJ+NflwX7DWCRjptc1Th8zrxgZqf9RC478Iw/R/0Gie14efL5jsXvip4hRWg9toSOamn4ezc3ycitnANEm/WpOt96UI2ZXK3KhCjdOxPeSYv1dolYQj+12cZd+LcFCZIUbZ8nO10GeI3/QNTBA9F1dWq/oqssBb4xKMPCitOi/BrVizMZ5bs8J07DDK/9yy1ZE+qoWLQ/2M1S/matCEn3BFb0HxFIrCYuYDyVqB85Yh2gTVwAhB8hNrXSa9Zo90CQYbjwJTFpNpHItXIOe7gLnuVYAmBom8pTVavCiNBxoECuSPfWboaUbSPseYunZV+J9HQkH69qXTnQ9qEvrFV11O+ABlLTergdIc/wS7SjN0Q/noDLZXiGQ7FZ9rL5foIIIF2oXmZBA6g53zYjawstEuKDr3+xiahKzfblV33iui9rZ+8is+UmZSuc/tfPmreHkXtrTgKzNVuqPNZC+fW5vRlYAABAASURBVIBs6G2HQzrv9UhLT2U1RK4QrZMk6oS8pm7pCM5GMx4ccLby55N3oDhh/QduPhoMz3oEGFDNjrJbnzRwMMqvZcFNTWwUCfkl2Yl4TJdTmhAP0KWtKLqBqUlxXZvFYXdo0jIvD26F1DzV3K/JMh7I2pSTVM33nheWwNrNttTQ9N6QLgXPbclbYG1kS3k3OFuXn4CyVKzK6YC1+xp0QSwh3aUl1DW+VSXjTwgAKyXmDMw4OSeRISgaAoz+FhGuHIPsvAnyYJyNpzpLOjXEG8tLIIWhPW/ajTUW27e5oP8IXu1vdEFfGtIgzwBYa1qbMshOxgv7eIgSkkcsjwNm/BiTJ3wU6fTHAS7psO88MBqdJdWedV7j6EwmtcgIeNfdUGRDCxTvT/bEXS9xZrWXI06XyoNROXV/lrdKrUr3zLkXDO0XKQLdjn1Pq/ENHHWNJzg2aRrEoLJ9hrE8Dpj4HOxx1ko0XPAmQq1TsWpFjfzdR8mf7mrdWE18i0RGWxVJcH5iLdyeH6PhMgh4iMBAU7Eng1k4ndafQuNhEYwoqRYB33GDA0146zE39MWkJYvaXMnPoIAFT1xpGkHsnQNmuOijoU8Ms+SQtjTqo/NQF+1AKEog/iYIPxMalujXsDsevPYjRTMu2X6wK9lpPOCK3hAbBIqEACfjaiTtwkLEc8b+EvrufGFUGSZxAAGC7gCjAXo3vwPLreo/fwm7Ubix5HPxNy4SNUSWStpnJWoFAl+HVJfuNDotmW6IvHPAoG+6UYze9h+OSV/b+nvURn8qzthChidJzVg19740Jn15MoKoWUlFUx2k5qLJrlrBlKzaolVYwZjoggJMvg+pOfcUwD9eWIs66JAt2lmevdpN0QB9nurFCc+cORGl3mbM2ITCkTfE3j1dqF5j99eoip4LFm9JvXPAlHnOlWlEn9GiD7d+KDXjw8QZ7yhRObw3AFqNat8YZ7kqItv6b6uuBJeZuP54dZ3ozRVl/u8yW2vUDyKQ6Oplto8cPHWxXyU16CNc0I83Uqe8VrjxOuegmD8Lu56XlsjXXKkgccIrNlld0pHRzc0BWruFmouvVr3SNpcpszUWdb6uzVAEQu8cMCYqAFy8LeEbeZUnFP0EQi2bAvbe0F3jExW2JWKqCc+N0Wm8st0SNwwF0TY0fZsaGu8vSIYmswU+SEg9vE5FmgmlQUAN5gEybpRxxpL72g3HOKQNR/ZgkPaqTbZFeY/wlZeh7QXhNRJdBXo1rSpkliumvIjbrHW63HI/iMTc990yeU3vHUChs58R4z6QqB9Ssfz7LUPnLRVHHENI9RmTaoo5B4w+feU+pWQmBDHbtXUnnODqQeda/hAGYm4D06HS5JOxwk3ubR0iK+thw3EHMvGNWWmGZjJ6hp6a4/IjwMuDqp9Sa74qEW5E6o6iTK0pPxIeWRCOfEGaAVU/p+w0ZS7o+rcm5ahkTFbTqBnZE6er5wPqI2N3NWbnHz13aKrIpvDSjCS5W4KW6AN5sXBbyRE13gfvHLCyjcnlSFwKe/Lpv9qWReKIr5Gm6pAzotqiTmVORcbFV6uv+uzuyvZQtGRTAKg+ovrmpq2zz2Lw9+RG+w/CjcevS/NmF47UE1sPuxLWG/+nK3pDXHwEnupcG7BttV50Ll0P2Ym4dq0ul7CqzJd7TLyuqrRoP7cJdFXBWCTuuIcZefXpy0vVL+X5wKhvPLFgOwYFiCwlU8keTHKzl7J8xQ19MWm1/0gtI+pa3A3EUhOlJ27ytpZsXaJD2tJYufxruuR50xHWYDPLzpt/NMYH2zaBzU+PlpUlzXXzUBZZubMIM0ch2kJu9NvVTYH6yMFoOHazUWj0kqQ/Bw1H70CAqwFVbGFXPQWGqtQIpHvn/I1Al2bTyxa3Zcsft3lyL6h7St1bgqHLCo501IEXeIJdT/xKkfOGxLwCEd2iyoCGyAXq/saMGUF9QW2Ww6Nq/+EIk8jS5x1OyeDPI9l19/DU8p25dMA6hpK7OYAMC33t+QzWGNuYGbuxZBbXMTGexl4XuGtyF6Oyhsmbz8iaP1omoWTNrhRuzPlyQIT5xIGXKBx5Gae5nJwfjhwn/TkvE9csg7vtHQTffd4di6EuJQJ2susi0ZeWOCIwBT+Dhd3zR2RUUQKRdY26J1xHuRfUPZU3FMn4nLx5N2Lk5cEdJGnU/1DStQIxLlf3N/Vv8fI6LLrHYrTqIzcM0Cx1ngkEqNr/WOQ50+U62xHJ7sdyEpaQwHsHnLHdf+fUJvefnssGEjn9oUUGmn6QzQTXeYvaa8Hk/hN1wcAJrnXlw9Bw7K5i3y6arFOFbjt64q21cgOxxIetcOOtTmxo+qPcWNdL3/FvnPN16UJjyw3WLXzbSHQVmPnbmD+/oAeDK4WGOC8E5AG40yiMz2JbqAE7o2RVVdJHpTTb5RGFJa/wPk/gLfLiHItJuhOk77QGjKfGItFOZ6i1IBQex8m9r54RIyITThd5imZb2RcU2KbDkOj021RWqX0WVKxRmMOtf5VUdwMpCDsi1eHe+YiiMUNttH7MvDwzhrA9jlDLvUPOCz+0yf18NMb92OectwpXnlsCceBJUN7Xy4EM+ooTmU+WG+u70hT0bed8XTog0pHPxo+ip7s7H07DU2IE5AFowR46v/1peaB/Gp2dmRJbUvXq5N5qx/zu5cUoKPfE1RiVihnwKlgcjd4utZZEMeAoSKb3NWBlDrPul04U9brIR6Inpr2CyTqmsXcElkz1OTvZeRyI/uSpxFR7QuQdLtFlsH7nkiE/8vrIWcIYkOivQHiZk937+MsoY002BDLJObdLvtMHx6Dfy7EJHiMgLUk/l37ONo/FDhMnL04haRq/ZFii705oNbPdIFg415vvzBODiuOAQ63Xi2z3wcKTeLAt6J5xDI55K4pwgdjfQG1L4SMLh5ls5VFb5yTqzr11mJhinRyx1/UEKs7LTAE28xurdZvEC9BiWL1GQB7eR7PNX5EH4+Veyx7v8hg4107Gf1IKHOxEfBansVUpdOWh4x+8ZqvN0TPH1WDOPPQUxFIcBzxQ+/xiHpYRJk3pR+/s3fLgHcnS1mYjkNl6ZEaeKYQfY977N+fJPZJN1fhTMRuQRtmRudlTMihN36+yoq3NtpNdbUwBtSiGH5qeMk7/1nPzijvQTpXdxOIg0Nvt5pN3xbGhyqQy0XeQjM8uabH64u8MOGHqLqneLMqYrSPlJW9PLLmpPwuZL7KK44BV0ULRvwOU3yLXVubPSLZvCi+2/c5/G4FJk8HQWgwgi8pzsH/LZRBnlIVGP6v3ygOkR/UpYSCJ7gLxJQi3FloedzoVdeL2BXJhh5jsgwik/dFuxephfEJsCKJI/Vtj2WnSDQK+RYA5xWtemoBE12/LYqNywsmuCKspPoT5KNNGjCvEhp3Rc4e343OKWJ7iOWBl9LJtp8vO/UAAxj4I0m+E15uw3+mrUBfdTmqarQC5XfvzSRCdhVD0GtkzvNj6YnuDgu4WmRjUy/wm3g7+YvC0LPvEnAVSIz6VpwWDol/1r5TiTfP/GHSyON/PiU4TDAIGAeAhJv4K93TXYcmSUtyD2TFPdj/Gifgh4lTUohvezD/OrlHlqtkPd8tzgeye+PeR7P6XSqyUKFgV0dSB5RHzm4fGOAm9sfs9tS7UGkOoRU1zUd8ZVS8G6s8bqYJZfexhOTiwO0LRPaTP17uFz3tnbw4bi+RlgEYqzplio6714zjqHH80vXZ2ZuTCP1riBGn+Ok6sF8ykdHLgYVjONk4RHZ9BsuvPHso1orQRMIT+QIAGnkvAA3I/kMQZSHT7rik/k4zfKrYdJFE949Rz9j2P8VOj5pcz202io0bi0R7LL5m44jpgVYxQ9BQQ8muuJByKVPticJu3doai3eJYt0BNzc7gzO4jYtDe3smvO0c1EcOz7ZFf7wjKvC14qJqje7EEb0dfu7dgbI5E11y5EbZgZHblgL271Fbz+8/XaWDCLEdOMv5R9Mb/uC7Z7AwC4woBYrrFuQ+ce4p3dO6xZPzQSgHBsXfN1lupMhDjR4XazQHaV5qZd1Vy0TMnXqi8cvN769jGKo2VyWsd0QFxtC8WTXkYyWs+M3Du4e8+Zy9D3flPjYiq39hDNY6oRbEG9Pe/KMf5rdtM9HvURk8Vfn+HnrnPYcGcp6S2eqrcJOotnZhZ+odwGiNHJPrqIA8S8UscOZDee3+X2LFu0O5ce4fYDz+Ju17KZavKtxNdP/WDubo2ZBLxLmW3RtxbV2Y2OtFTI3HgOk/GPd/bPV0nOfeBc0/F38xmi2/zltzUr8pg98QvW48VY0bO58Hg82LCmm0G+bCg65FKa2bO9r+UxgErh2Zj32yGZM1jNCCYfgzJ9oOz0vk1Uw24srGwIPP6+9sL4i8nc093N5Lx3+SMia6/lNNMo9sgYBAoEQI98YdyPg8Gnxnz73E7bqdEhShcTWkcsLKzPvoI1vJOcmhLdB8YExGg+Uhd80n3zGXiuK05gN6Ow0CBBXlbwEgjgG3RcMETecswjAYBg4BBIC8EDFMxESidA1alOCD6guyelVhASD+HVOz7BQgoHeuODW/AQmFD4td+uC32i/4bZjMIGAQMAgaBqkKgtA6YiBGKSl8uP1AAisrmX0ENzipASFFZU1d8En2xFMBbgpny1mXxr3DQj0uy1nPeNhpGg4BBwCBQpQgUu1jKmRVbx0j5odZDwSjw4wu0L1IdT6K33V8Dk3pjXweCz0v5akcW3EWKzXdh/9YfuuAwpAYBg4BBwCBQQQhYZbO1LnqU1BCXFKafdwPR78QJH47Fl00pTFaB3Ep/r9R6vZgqRPQo6luPKdAiw24QMAgYBAwCPkagfA5YgRJq3U92b0gcPeimEt2LzMTlaPN4vrCu/lT7gY5+QmG13gF9K1Dbss/Aofk1CBgEDAIGgWpFoLwOWKEain5Cdg9JLDzMnLIGfR3XFi7IhYRU7C6A8ltWEiO2h6WPfOqIVJNgEDAIGAQMAlWHQPkdsII0FJ0huzslFhqCYD4TfbEMlsyuK1RYVv6+jiuRiqklIb+UlU47k24Q5zt0nrM2pyE0CBgEDAIGgcpDwB8OWOEWih4rfcKFjI5WUgYiw0I60yMO8g8S6wcSPfpNtteKzHvF0Z8nEidI9CDQkQi1nOGBICPCIGAQMAgYBCoEAf84YAWYGh0NqIW116pTD+I3REYSqfYfY/GN+S0BKQKc8MjsrZGKvYIApeT8cIlehH6sWlEjzrewucJeWOI3GcYeg4BBwCBQ5Qj4ywErsEPRuxHAdHi60c+RWfUCUlc15yW2t/1n6M+8JrzTJHoTGO8jw5/EIW1pbwQaKQYBg4BBwCBQSQj4zwEr9JyVn+y9wZirTj2K4jyt26QW+xxSHZdryeyL/QKp9udB9BOhz+8LRsI4IhCuRnDSlgi3vjoizyQYBACDgUHAIDAOEPCnA1bAh85birrocdIv/N/q1MO4k8i8AKlNHqANAAADT0lEQVQYoyc2st9VTWXqaz/TyWf8CCDv1p5mrARwPWqjLdjv9H45NsEgYBAwCBgExikC/nXAg39IqPXbCE7YRU7fkehtsHCd42h7O/aEiotm12LmlAyYijGV6W15odgMoeiZ3hbCSDMIVBkCpjgGgXGCgP8dsPoj9j3rObwTmAbGMnXqeSReChXtjBpg5bl4EM4U+7fzXrCRaBAwCBgEDAKVikBlOGCF7lHnrJEa5HRpPj5JTm2JlRBWgPkIaXK+Hsr+SrDY2GgQMAiUEwGjexwhUDkOePBPCbXeIs24AYAegL+3i8XOqahrvc/fZhrrDAIGAYOAQaAcCFSeAx5EKdRyKGw6DqBF8NPG6APT4eJ82/xklrHFIGAQMAj4HoFxZmDlOmD1R9W3zEWopVaaed+U04zE8gVGBtvyJGkmD6Gu5f7yGWI0GwQMAgYBg0AlIFDZDngQ4brWj8PiT8PmGwaTSrz/LSbU7ITtWz8ssV6jziBgEDAIGAQqFIGNHHCFlkKZvX/r86hvPQMZnqlOSxKJZiGdmY5Q9DvY5+zijNAuSUGMEoOAQcAgYBAoNQLV44AHkQu3/lUcIoH4Ekn6p8RihKUi9IuobbkEDecbxytgmGAQMAgYBAwC7hCoPgc8WP7a1lniiHcD6EgAL0vMGTQIXpFm7mNF7t4S/65Bb0gMAgYBg4BBwCAwKgLV64AHixtquRe1K6aDA9sPJuWxt9EfnIZl06ZLM/edefAbFoOAQcAgYBAwCAxDoPodsCoutdmoO+cVqbUSYJ+gkvSj0IeiARzwvddwwgkZfb5KozT2GgQMAgYBg0ApERgfDngooqHzOh1HzHypJD8ncbSgvoB0mUOn6EejMGkGAYOAQcAgYBAoAIHx54AHwaprvUgc7C6AdRIIfesjcLSk74Talh8Nkpp99SNgSmgQMAgYBEqNwPh1wINIh869BbXR0PoYit49mGX2BgGDgEHAIGAQKBYCxgEXC1kj1yBQMQgYQw0CBoFyIGAccDlQNzoNAgYBg4BBYNwjYBzwuL8EDAAGgfGNgCm9QaBcCBgHXC7kjV6DgEHAIGAQGNcIGAc8rv9+U3iDgEFgfCNgSl9OBIwDLif6RrdBwCBgEDAIjFsE/h8AAP//MW8ijAAAAAZJREFUAwC5XaLvHvj2HwAAAABJRU5ErkJggg==" alt="Symbo"><span>Embedded protection demo</span></div>
+    <div class="over"><span>Customer</span></div>
+    <div class="card" id="presets"></div>
+    <div class="over"><span>Profile from application</span></div>
+    <div id="lever-groups" style="display:flex;flex-direction:column;gap:8px"></div>
+  </aside>
+
+  <!-- ============ CENTER: LoanBee checkout (customer-facing) ============ -->
+  <main class="stage" aria-label="LoanBee checkout preview">
+    <div class="phone">
+      <div class="screen" id="phone">
+        <div class="island" aria-hidden="true"></div>
+        <div class="sbar" aria-hidden="true"><span>9:41</span><span class="sb-i"><span class="bars"><i></i><i></i><i></i><i></i></span><span class="batt"></span></span></div>
+        <header class="app-h">
+          <button type="button" class="back" aria-label="Back" data-action="noop"><i class="ph-bold ph-arrow-left"></i></button>
+          <span class="lb-mark" aria-label="LoanBee"><i aria-hidden="true"></i>LoanBee</span>
+          <button type="button" class="help" data-action="help">Help</button>
+        </header>
+        <div class="prog" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="scroll" id="scroll">
+          <h1 class="pg-t">Review and sign</h1>
+          <p class="pg-s">Step 5 of 5 · Check your offer</p>
+          <div id="loan-summary" data-loan-summary></div>
+          <!-- Symbo-powered region. Only this re-renders on profile change. -->
+          <section class="sy" id="insurance-module" data-symbo-module aria-label="Optional protection"></section>
+          <div class="li-row"><i class="ph ph-file-text" aria-hidden="true"></i><span>Key Fact Statement</span><i class="ph ph-caret-right" aria-hidden="true"></i></div>
+          <div class="li-row"><i class="ph ph-bank" aria-hidden="true"></i><span>Repay by UPI Autopay · HDFC ••4821</span></div>
+        </div>
+        <footer class="foot" id="foot"></footer>
+        <div id="sheet-root"></div>
+        <div id="toast-root"></div>
+      </div>
+    </div>
+    <p class="stage-cap">LoanBee owns the journey · Symbo powers the protection section</p>
+  </main>
+
+  <!-- ============ RIGHT: live outcome + demo evidence (presenter) ============ -->
+  <aside class="side" id="outcome" aria-label="Live outcome">
+    <div class="over" style="padding-top:2px"><span>Live outcome</span><button type="button" class="btn btn-dark btn-sm" data-action="play-demo" id="play-demo">Play B → C</button></div>
+    <section class="card wc" id="what-changed" data-what-changed aria-live="polite">
+      <div class="over" style="padding:0 0 6px"><span>What changed</span><span class="mini" id="wc-time" style="letter-spacing:0"></span></div>
+      <p class="wc-line" id="wc-line" data-wc-headline></p>
+      <div class="ba" id="wc-ba"></div>
+      <details id="wc-more"><summary>Details<span class="chev"></span></summary><div id="wc-body"></div></details>
+    </section>
+    <details class="card lv" id="sl-card">
+      <summary><span class="lv-txt"><span class="lv-t">Shortlist</span><span class="lv-s" id="sl-sum"></span></span><span id="sl-status"></span><span class="chev"></span></summary>
+      <div class="lv-body" id="sl-body"></div>
+    </details>
+    <details class="card lv" id="ev-card">
+      <summary><span class="lv-txt"><span class="lv-t">Demo evidence</span><span class="lv-s" id="ev-sum"></span></span><span class="badge b-review">Illustrative</span><span class="chev"></span></summary>
+      <div class="lv-body" id="evidence-view" data-evidence>
+        <div id="ev-main"></div>
+        <details class="ev-sub"><summary>Profile signals used<span class="chev"></span></summary><div id="ev-signals"></div></details>
+        <details class="ev-sub"><summary>Event log<span class="chev"></span></summary><ul class="ev-log" id="ev-log"></ul></details>
+        <div style="padding:8px 0 8px"><button type="button" class="btn btn-ghost btn-sm" data-action="copy-evidence">Copy as JSON</button></div>
+      </div>
+    </details>
+    <p class="note">Demo evidence stays in this browser. Symbo catalogue rules and reference rate-card prices power the protection section; these are not live quotes or production audit records. Loan terms are illustrative.</p>
+  </aside>
+</div>
+<div class="scrim" id="scrim" data-action="close-drawers"></div>
+<div class="dt"><button type="button" class="btn btn-dark" data-action="drawer" data-drawer="levers" aria-controls="levers">Customer levers</button><button type="button" class="btn btn-dark" data-action="drawer" data-drawer="outcome" aria-controls="outcome">Outcome</button></div>
+
+<script src="./config.js"></script>
+<script src="./source-data.js"></script>
+<script src="./engine.js"></script>
+<script src="./loanbee-engine.js"></script>
+<script>
+'use strict';
+/* Synthetic loan presets and UI fields. Insurance logic is in loanbee-engine.js. */
+const LOAN_RATES = { 'Personal loan': 16, 'Business loan': 18, 'Two-wheeler loan': 12, 'Consumer durable': 14 };
+const PROCESSING_FEE_PCT = 2;
+const TENURES = [6, 12, 18, 24, 36];
+
+const PRESETS = {
+  A: { label: 'Short loan', blurb: '6-month loan, self-employed, low digital activity.',
+    profile: { name: 'Ravi Kumar', age: 34, gender: 'Male', city: 'Nagpur', cityTier: 'Tier 2', dependants: 1, children: 0, employment: 'Self-employed', businessOwner: false, incomePattern: 'Seasonal', monthlyIncome: 55000, loanType: 'Personal loan', loanAmount: 60000, tenure: 6, vectorExposure: 'Low', digitalFirst: false, upiUsage: 'Low', onlineTxn: 'Low', hospitalCashNeed: 'No' } },
+  B: { label: 'Digital-first', blurb: 'Daily UPI, frequent online payments, salaried.',
+    profile: { name: 'Ananya Iyer', age: 27, gender: 'Female', city: 'Bengaluru', cityTier: 'Tier 1', dependants: 0, children: 0, employment: 'Salaried', businessOwner: false, incomePattern: 'Stable', monthlyIncome: 90000, loanType: 'Personal loan', loanAmount: 300000, tenure: 24, vectorExposure: 'Low', digitalFirst: true, upiUsage: 'High', onlineTxn: 'High', hospitalCashNeed: 'No' } },
+  C: { label: 'Family and health', blurb: '3 dependants, variable income, wants hospital cash.',
+    profile: { name: 'Sunita Patil', age: 38, gender: 'Female', city: 'Pune', cityTier: 'Tier 2', dependants: 3, children: 2, employment: 'Self-employed', businessOwner: false, incomePattern: 'Variable', monthlyIncome: 45000, loanType: 'Personal loan', loanAmount: 150000, tenure: 12, vectorExposure: 'Medium', digitalFirst: false, upiUsage: 'Medium', onlineTxn: 'Low', hospitalCashNeed: 'Yes' } },
+  D: { label: 'Business owner', blurb: '36-month business loan, dependants, high vector exposure.',
+    profile: { name: 'Imran Shaikh', age: 45, gender: 'Male', city: 'Surat', cityTier: 'Tier 2', dependants: 3, children: 2, employment: 'Self-employed', businessOwner: true, incomePattern: 'Variable', monthlyIncome: 80000, loanType: 'Business loan', loanAmount: 800000, tenure: 36, vectorExposure: 'High', digitalFirst: false, upiUsage: 'Medium', onlineTxn: 'Medium', hospitalCashNeed: 'Not sure' } }
+};
+
+const FIELD_META = {
+  name: { label: 'Name', source: 'KYC', type: 'text', usedFor: 'Display only' },
+  age: { label: 'Age', source: 'KYC', type: 'int', min: 18, max: 75, usedFor: 'Suitability and cover context' },
+  gender: { label: 'Gender', source: 'KYC', type: 'text', options: ['Female', 'Male', 'Other'], usedFor: 'Not used' },
+  city: { label: 'City', source: 'KYC', type: 'text', usedFor: 'Display only' },
+  cityTier: { label: 'City tier', source: 'Derived', type: 'text', options: ['Tier 1', 'Tier 2', 'Tier 3'], usedFor: 'Blood test collection' },
+  dependants: { label: 'Dependants', source: 'Customer', type: 'int', min: 0, max: 8, usedFor: 'PA cover, Doctor on Call' },
+  children: { label: 'Children', source: 'Customer', type: 'int', min: 0, max: 6, usedFor: 'Blood test' },
+  employment: { label: 'Employment', source: 'Customer', type: 'text', options: ['Salaried', 'Self-employed', 'Gig / freelance'], usedFor: 'Context' },
+  businessOwner: { label: 'Business owner', source: 'Customer', type: 'bool', usedFor: 'PA cover, Udyam' },
+  incomePattern: { label: 'Income pattern', source: 'Customer', type: 'text', options: ['Stable', 'Variable', 'Seasonal'], usedFor: 'EMI Protect' },
+  monthlyIncome: { label: 'Monthly income', source: 'Application', type: 'int', min: 1000, max: 10000000, usedFor: 'EMI / income suitability' },
+  loanType: { label: 'Loan type', source: 'Application', type: 'text', options: Object.keys(LOAN_RATES), usedFor: 'Loan rate' },
+  loanAmount: { label: 'Loan amount', source: 'Application', type: 'int', min: 25000, max: 1500000, step: 5000, usedFor: 'PA cover, EMI Protect' },
+  tenure: { label: 'Tenure', source: 'Application', type: 'int', options: TENURES, usedFor: 'PA cover, EMI Protect term' },
+  emi: { label: 'Monthly EMI', source: 'Application', type: 'int', min: 0, max: 200000, usedFor: 'EMI Protect cover' },
+  vectorExposure: { label: 'Vector-borne exposure', source: 'Asked', type: 'text', options: ['Low', 'Medium', 'High'], usedFor: 'Vector-Borne, blood test' },
+  digitalFirst: { label: 'Digital-first', source: 'Asked', type: 'bool', usedFor: 'Cyber, dark web' },
+  upiUsage: { label: 'UPI usage', source: 'Asked', type: 'text', options: ['Low', 'Medium', 'High'], usedFor: 'Cyber' },
+  onlineTxn: { label: 'Online transactions', source: 'Asked', type: 'text', options: ['Low', 'Medium', 'High'], usedFor: 'Cyber, dark web' },
+  hospitalCashNeed: { label: 'Hospital cash need', source: 'Asked directly', type: 'text', options: ['Yes', 'No', 'Not sure'], usedFor: 'Hospi Cash' }
+};
+const LOAN_FIELDS = ['loanType', 'loanAmount', 'tenure', 'emi'];
+
+const LEVER_GROUPS = [
+  { title: 'Identity', src: 'KYC', fields: [['name', 'text'], ['age', 'number'], ['gender', 'seg'], ['city', 'text'], ['cityTier', 'seg']], sum: p => `${p.name} · ${p.age} · ${p.city}` },
+  { title: 'Household and work', src: 'Customer', fields: [['dependants', 'stepper'], ['children', 'stepper'], ['employment', 'select'], ['businessOwner', 'switch'], ['incomePattern', 'seg'], ['monthlyIncome', 'number']], sum: p => `${p.dependants} dependant${p.dependants === 1 ? '' : 's'} · ${p.incomePattern} income · ${fmtINR(p.monthlyIncome)}/mo${p.businessOwner ? ' · business' : ''}` },
+  { title: 'Loan', src: 'Application', fields: [['loanType', 'select'], ['loanAmount', 'range'], ['tenure', 'seg'], ['emi', 'number']], sum: p => `${fmtINR(p.loanAmount)} · ${p.tenure} months` },
+  { title: 'Digital behaviour', src: 'Asked', fields: [['digitalFirst', 'switch'], ['upiUsage', 'seg'], ['onlineTxn', 'seg']], sum: p => `UPI ${p.upiUsage.toLowerCase()} · online ${p.onlineTxn.toLowerCase()}${p.digitalFirst ? ' · digital-first' : ''}` },
+  { title: 'Health and exposure', src: 'Asked directly', fields: [['vectorExposure', 'seg'], ['hospitalCashNeed', 'seg']], sum: p => `Vector ${p.vectorExposure.toLowerCase()} · hospital cash ${p.hospitalCashNeed.toLowerCase()}` }
+];
+
+/* ---------- helpers ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmtINR = n => '₹' + Number(n).toLocaleString('en-IN', { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 });
+const fmtL = n => n >= 100000 ? '₹' + (n / 100000).toLocaleString('en-IN', { maximumFractionDigits: 1 }) + 'L' : fmtINR(n);
+const fmtLakh = n => n >= 100000 ? '₹' + (n / 100000).toLocaleString('en-IN', { maximumFractionDigits: 1 }) + ' lakh' : fmtINR(n);
+const fmtTime = d => d.toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+const fmtClock = d => d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+function calcEmi(p, rate, n) { const r = rate / 1200; if (!r) return Math.round(p / n); const f = Math.pow(1 + r, n); return Math.round(p * r * f / (f - 1)); }
+function hashId(o) { const s = JSON.stringify(o); let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36).toUpperCase().padStart(7, '0').slice(0, 7); }
+
+/* =====================================================================
+   3. STATE
+   ===================================================================== */
+const state = {
+  profile: Object.assign({}, PRESETS.A.profile),
+  activePreset: 'A', presetOpen: 'A',
+  result: null, baseline: null, lastChangeAt: 0, diff: null,
+  added: {}, vasAdded: {}, paSI: null,      // nothing added by default
+  decision: null, notice: false,
+  moduleOpen: true, vasOpen: false,
+  sheet: null, sheetOpener: null,
+  presentedAt: null, events: []
+};
+state.profile.emi = calcEmi(state.profile.loanAmount, LOAN_RATES[state.profile.loanType], state.profile.tenure);
+function logEvent(type, text) { state.events.unshift({ at: new Date(), type, text }); if (state.events.length > 80) state.events.pop(); }
+
+/* =====================================================================
+   4. PROFILE -> ENGINE -> RENDER
+   ===================================================================== */
+function parseVal(k, raw) { const t = (FIELD_META[k] || {}).type; return t === 'int' ? parseInt(raw, 10) : t === 'bool' ? (raw === true || raw === 'true') : raw; }
+function clamp(p) {
+  const c = (k, lo, hi) => { if (Number.isFinite(p[k])) p[k] = Math.max(lo, Math.min(hi, p[k])); };
+  c('age', 18, 75); c('dependants', 0, 8); c('children', 0, 6); c('monthlyIncome', 1000, 10000000); c('loanAmount', 25000, 1500000); c('emi', 0, 200000);
+  p.children = Math.min(p.children, p.dependants);
+  if (!TENURES.includes(p.tenure)) p.tenure = 12;
+}
+function fmtField(k, v) { if (v == null) return '-'; if (k === 'loanAmount' || k === 'emi' || k === 'monthlyIncome') return fmtINR(v); if (typeof v === 'boolean') return v ? 'Yes' : 'No'; return String(v); }
+
+function setProfile(patch, meta = {}) {
+  const prev = Object.assign({}, state.profile), clean = {};
+  Object.keys(patch).forEach(k => {
+    if (!(k in FIELD_META)) return;
+    const v = typeof patch[k] === 'string' && FIELD_META[k].type !== 'text' ? parseVal(k, patch[k]) : patch[k];
+    if (FIELD_META[k].type === 'int' && !Number.isFinite(v)) return;
+    clean[k] = v;
+  });
+  Object.assign(state.profile, clean); clamp(state.profile);
+  const p = state.profile;
+  if (!('emi' in clean) && ['loanAmount', 'tenure', 'loanType'].some(k => k in clean)) p.emi = calcEmi(p.loanAmount, LOAN_RATES[p.loanType] || 16, p.tenure);
+  const changed = Object.keys(FIELD_META).filter(k => prev[k] !== p[k]);
+  if (!changed.length && !meta.force) return;
+  if (meta.source !== 'preset') state.activePreset = Object.keys(PRESETS).find(id => Object.keys(PRESETS[id].profile).every(k => PRESETS[id].profile[k] === p[k])) || null;
+
+  const now = Date.now();
+  if (meta.source === 'preset' || now - state.lastChangeAt > 1500) state.baseline = state.result;
+  state.lastChangeAt = now;
+  if (meta.source === 'preset') logEvent('profile', `Preset ${meta.preset} loaded (${p.name})`);
+  else changed.forEach(k => logEvent('profile', `${FIELD_META[k].label}: ${fmtField(k, prev[k])} → ${fmtField(k, p[k])}`));
+
+  syncInputs(document.activeElement);
+  if (changed.some(k => LOAN_FIELDS.includes(k))) renderLoan(true);
+
+  renderResult(SymboCheckoutEngine.recommend(p), { source: meta.source });
+}
+
+const quoteSig = r => r ? JSON.stringify({ p: r.products.map(x => [x.id, x.cover, x.premium, x.termMonths, x.vasFee, x.siOptions]), v: r.vas.map(v => v.id) }) : '';
+const proposedTotal = r => SymboCheckoutEngine.round2(r.products.reduce((s, x) => s + x.premium, 0) + (r.vas.length ? SymboCheckoutEngine.indicativeBundleFee(r) || 0 : 0));
+const normalize = r => Object.assign({ products: [], vas: [], notRecommended: [], reasons: [], signals: [], recommendationId: 'REC-EXTERNAL', ruleVersion: 'external', generatedAt: new Date().toISOString() }, r);
+
+function renderResult(raw, opts = {}) {
+  const result = normalize(raw), prev = state.result;
+  const material = prev && quoteSig(prev) !== quoteSig(result);
+  if (material) {
+    // Never carry consent across a material quote change: everything returns to pending.
+    const had = state.decision || Object.values(state.added).some(Boolean) || Object.values(state.vasAdded).some(Boolean);
+    if (had) { state.notice = true; logEvent('consent', 'Consent returned to pending review (quote changed)'); }
+    state.added = {}; state.vasAdded = {}; state.decision = null;
+    if (state.sheet) closeSheet();
+  }
+  const pa = result.products.find(x => x.id === 'pa'), prevPa = prev && prev.products.find(x => x.id === 'pa');
+  if (pa && (!prevPa || prevPa.suggestedSI !== pa.suggestedSI || !pa.siOptions.some(o => o.si === state.paSI))) state.paSI = pa.suggestedSI;
+  state.result = result;
+  if (!prev || material || opts.source === 'preset') {
+    logEvent('recommendation', `${result.recommendationId}: ${result.products.map(x => x.name).join(' + ') || 'no products'}`);
+    state.presentedAt = new Date();
+  }
+  if (state.baseline) state.diff = diffResults(state.baseline, result);
+  renderModule({ animate: !!prev && material, prev });
+  renderOutcome(); renderEvidence(); renderFooter(); renderPresets();
+}
+
+function diffResults(a, b) {
+  const ids = r => r.products.map(x => x.id), vids = r => r.vas.map(v => v.id);
+  const added = b.products.filter(x => !ids(a).includes(x.id)), removed = a.products.filter(x => !ids(b).includes(x.id));
+  const vasAdded = b.vas.filter(v => !vids(a).includes(v.id)), vasRemoved = a.vas.filter(v => !vids(b).includes(v.id));
+  const pA = a.products.find(x => x.id === 'pa'), pB = b.products.find(x => x.id === 'pa');
+  const siBefore = pA ? pA.suggestedSI : null, siAfter = pB ? pB.suggestedSI : null;
+  const totalBefore = proposedTotal(a), totalAfter = proposedTotal(b);
+  const names = b.products.map(x => x.name).join(' + ');
+  let headline;
+  if (added.length && removed.length) headline = `Customer changed → ${names} recommended · ${removed.map(x => x.name).join(', ')} replaced`;
+  else if (added.length) headline = `Customer changed → ${names} recommended · ${added.map(x => x.name).join(', ')} added`;
+  else if (removed.length) headline = `Customer changed → ${names || 'no products'} recommended · ${removed.map(x => x.name).join(', ')} removed`;
+  else if (siBefore !== siAfter && siAfter) headline = `Customer changed → Personal Accident cover ${siBefore ? fmtLakh(siBefore) : 'none'} to ${fmtLakh(siAfter)}`;
+  else if (vasAdded.length || vasRemoved.length) headline = 'Customer changed → same insurance, services updated';
+  else if (totalBefore !== totalAfter) headline = 'Customer changed → same shortlist, price updated';
+  else headline = 'Profile updated → shortlist unchanged';
+  const reasons = [];
+  added.forEach(x => reasons.push(x.reason));
+  removed.forEach(x => { const n = b.notRecommended.find(m => m.id === x.id); if (n) reasons.push(n.reason.replace('is not shortlisted', 'leaves the shortlist')); });
+  if (siBefore !== siAfter && pB) reasons.push(pB.reason);
+  vasAdded.forEach(v => reasons.push(v.reason));
+  if (!reasons.length) b.reasons.forEach(r => reasons.push(r));
+  const changedAny = added.length || removed.length || siBefore !== siAfter || vasAdded.length || vasRemoved.length || totalBefore !== totalAfter;
+  return { at: new Date(), headline, before: a, after: b, added, removed, vasAdded, vasRemoved, siBefore, siAfter, totalBefore, totalAfter, changedAny, reasons: [...new Set(reasons)].slice(0, 3) };
+}
+
+/* =====================================================================
+   5. CUSTOMER UI: LoanBee checkout + embedded Symbo module
+   ===================================================================== */
+function renderLoan(flash) {
+  const p = state.profile, fee = Math.round(p.loanAmount * PROCESSING_FEE_PCT / 100 * 1.18);
+  $('#loan-summary').innerHTML = `<div class="loan${flash ? ' flash' : ''}">
+    <div class="loan-top"><span>${esc(p.loanType)}</span><span class="badge b-green"><span class="dot"></span>Approved</span></div>
+    <div class="loan-amt" data-loan-amount>${fmtINR(p.loanAmount)}</div>
+    <dl class="loan-g">
+      <div><dt>Loan tenure</dt><dd data-loan-tenure>${p.tenure} months</dd></div>
+      <div><dt>Monthly EMI</dt><dd data-loan-emi>${fmtINR(p.emi)}</dd></div>
+      <div><dt>Interest</dt><dd>${LOAN_RATES[p.loanType] || 16}% p.a.</dd></div>
+      <div><dt>Processing fee</dt><dd>${fmtINR(fee)}</dd></div>
+    </dl>
+    <div class="loan-rcv"><span>You receive</span><b>${fmtINR(p.loanAmount - fee)}</b></div>
+  </div>`;
+}
+
+const paOpt = p => (p.siOptions || []).find(o => o.si === state.paSI) || { si: p.cover, premium: p.premium };
+const priceOf = p => p.siOptions ? paOpt(p).premium : p.premium;
+const coverOf = p => p.siOptions ? fmtL(paOpt(p).si) + ' cover' : p.coverShort;
+const findItem = (kind, id) => kind === 'vas' ? state.result.vas.find(v => v.id === id) : state.result.products.find(x => x.id === id);
+const selectedBundleFee = () => SymboCheckoutEngine.bundleFee(state.result, state.added, state.paSI);
+const hasSelectedInsurance = () => state.result.products.some(p => state.added[p.id]);
+const selectedBundleKey = () => { const p = state.result.products.find(x => state.added[x.id]); return p ? `${p.id}:${p.id === 'pa' ? paOpt(p).rateId : p.rateId}:${selectedBundleFee()}` : null; };
+
+function chosen() {
+  const r = state.result; if (!r) return [];
+  const fee = selectedBundleFee(); let charged = false;
+  return r.products.filter(x => state.added[x.id]).map(x => ({ kind: 'insurance', id: x.id, name: x.name, cover: coverOf(x), term: x.termMonths + ' months', price: priceOf(x) }))
+    .concat(r.vas.filter(v => state.vasAdded[v.id]).map(v => { const price = charged ? 0 : fee; charged = true; return { kind: 'service', id: v.id, name: v.name, cover: v.desc, term: v.validity, price }; }));
+}
+function totals() {
+  const c = chosen();
+  const ins = c.filter(i => i.kind === 'insurance').reduce((s, i) => s + i.price, 0), svc = c.filter(i => i.kind === 'service').reduce((s, i) => s + i.price, 0);
+  return { ins: SymboCheckoutEngine.round2(ins), svc: SymboCheckoutEngine.round2(svc), all: SymboCheckoutEngine.round2(ins + svc), n: c.length };
+}
+
+function sideHTML(kind, id, name, price, on, sub, canAdd = true) {
+  return `<div class="row-side">
+    <span class="row-p" data-premium>${price == null ? '—' : fmtINR(price)}${sub ? `<small>${sub}</small>` : ''}</span>
+    ${on ? `<span class="added"><i class="ph-bold ph-check" aria-hidden="true"></i>Added</span><button type="button" class="rm" data-action="remove" data-kind="${kind}" data-id="${id}" data-fk="rm-${id}" aria-label="Remove ${esc(name)}">Remove</button>`
+         : `<button type="button" class="add" data-action="add" data-kind="${kind}" data-id="${id}" data-fk="add-${id}" data-consent="open" ${canAdd ? '' : 'disabled'} aria-label="${canAdd ? `Add ${esc(name)}, ${fmtINR(price)}` : 'Choose insurance first'}"><i class="ph-bold ph-plus" aria-hidden="true"></i>${canAdd ? 'Add' : 'Cover first'}</button>`}
+  </div>`;
+}
+
+function productRow(p, isNew) {
+  const on = !!state.added[p.id];
+  const si = p.siOptions ? `<div class="si" role="radiogroup" aria-label="Personal Accident sum insured" data-si-selector>
+    ${p.siOptions.map(o => { const c = o.si === state.paSI; return `<button type="button" class="sip" role="radio" aria-checked="${c}" tabindex="${c ? 0 : -1}" data-action="set-si" data-si="${o.si}" data-fk="si-${o.si}">${o.si === p.suggestedSI ? '<span class="sg">Suggested</span>' : ''}${fmtL(o.si)}<small>${fmtINR(o.premium)}</small></button>`; }).join('')}
+  </div>` : '';
+  return `<li class="row${on ? ' on' : ''}${isNew ? ' new' : ''}" data-product-id="${p.id}">
+    <span class="row-ic" aria-hidden="true"><i class="ph ${p.icon}"></i></span>
+    <div>
+      <div class="row-n">${p.name}<button type="button" class="info" data-action="info" data-kind="product" data-id="${p.id}" data-fk="info-${p.id}" aria-label="View benefits and terms for ${p.name}"><span>i</span></button></div>
+      <div class="row-m" data-cover>${coverOf(p)} · ${p.termMonths}-month policy</div>
+      <div class="row-w">${esc(p.why)}</div>
+    </div>
+    ${sideHTML('product', p.id, p.name, priceOf(p), on, 'reference · incl. GST')}
+    ${si}
+  </li>`;
+}
+function vasRow(v, isNew) {
+  const on = !!state.vasAdded[v.id];
+  const fee = selectedBundleFee();
+  const first = !Object.values(state.vasAdded).some(Boolean);
+  return `<li class="row svc${on ? ' on' : ''}${isNew ? ' new' : ''}" data-vas-id="${v.id}">
+    <span class="row-ic" aria-hidden="true"><i class="ph ${v.icon}"></i></span>
+    <div>
+      <div class="row-n">${v.name}<button type="button" class="info" data-action="info" data-kind="vas" data-id="${v.id}" data-fk="info-${v.id}" aria-label="What's included in ${v.name}"><span>i</span></button></div>
+      <div class="row-m">Value-add service · ${v.validity}</div>
+      <div class="row-w">${esc(v.why)}</div>
+    </div>
+    ${sideHTML('vas', v.id, v.name, fee == null ? null : first ? fee : 0, on, fee == null ? 'choose cover first' : first ? 'reference bundle · once' : 'included in bundle', fee != null)}
+  </li>`;
+}
+
+function moduleHTML(prev) {
+  const r = state.result; if (!r) return '';
+  const t = totals();
+  const prevIds = prev ? prev.products.map(x => x.id) : null, prevV = prev ? prev.vas.map(v => v.id) : null;
+  const prevPa = prev && prev.products.find(x => x.id === 'pa');
+  const from = Math.min(...r.products.map(priceOf));
+  const sub = t.n ? `${t.n} added · ${fmtINR(t.all)}` : r.products.length ? `${r.products.length} picks for your profile · from ${fmtINR(from)}` : 'Nothing suggested';
+  return `
+    <button type="button" class="sy-h" data-action="toggle-module" aria-expanded="${state.moduleOpen}" aria-controls="sy-body" data-fk="sy-h">
+      <span class="sy-ic" aria-hidden="true"><i class="ph-fill ph-shield-check"></i></span>
+      <span class="sy-ht"><span class="sy-t">Protect this loan</span><span class="sy-s">${sub}</span></span>
+      ${t.n ? '<span class="sy-on"><i class="ph-bold ph-check" aria-hidden="true"></i>Protected</span>' : ''}
+      <span class="chev"></span>
+    </button>
+    <div id="sy-body" ${state.moduleOpen ? '' : 'hidden'}>
+      ${state.notice ? '<p class="sy-note" role="status">Your details changed, so options updated. Please review again.</p>' : ''}
+      <ul class="rows" data-product-list>${r.products.map(p => productRow(p, prev && (!prevIds.includes(p.id) || (p.id === 'pa' && prevPa && prevPa.suggestedSI !== p.suggestedSI)))).join('')}</ul>
+      ${r.vas.length ? `<details class="vas" data-vas-section ${state.vasOpen ? 'open' : ''}>
+        <summary data-fk="vas-sum"><span class="vas-t">Helpful value-adds</span><span class="mini">${r.vas.length}</span><span class="chev"></span></summary>
+        <ul class="rows">${r.vas.map(v => vasRow(v, prev && !prevV.includes(v.id))).join('')}</ul>
+      </details>` : ''}
+      ${t.n ? `<div class="tot" data-totals><div><span>Protection total</span><br><span data-total="split">Insurance <span data-total="insurance">${fmtINR(t.ins)}</span> · Value-adds <span data-total="vas">${fmtINR(t.svc)}</span></span></div><b data-total="optional">${fmtINR(t.all)}</b></div>` : ''}
+      <div class="pw">Protection options powered by <img src="${SYMBO_LOGO}" alt="Symbo"></div>
+    </div>`;
+}
+
+let swapTimer = null;
+function renderModule({ animate = false, prev = null } = {}) {
+  const m = $('#insurance-module');
+  const fk = document.activeElement && m.contains(document.activeElement) ? document.activeElement.dataset.fk : null;
+  const paint = () => {
+    m.innerHTML = moduleHTML(prev); m.classList.toggle('on', totals().n > 0);
+    const d = $('[data-vas-section]', m); if (d) d.addEventListener('toggle', () => { state.vasOpen = d.open; });
+    if (fk) { const el = $(`[data-fk="${fk}"]`, m); if (el) el.focus({ preventScroll: true }); }
+  };
+  if (!animate) { clearTimeout(swapTimer); m.classList.remove('updating'); paint(); return; }
+  m.classList.add('updating'); clearTimeout(swapTimer);
+  swapTimer = setTimeout(() => { paint(); m.classList.remove('updating'); }, 120);
+}
+
+function renderFooter() {
+  const f = $('#foot'), t = totals(), d = state.decision;
+  if (d) {
+    f.innerHTML = `<div class="foot-l"><span>${d.type === 'accepted' ? `Demo selection recorded · ${d.items.length} item${d.items.length > 1 ? 's' : ''}` : 'No protection added'}</span><b>${d.type === 'accepted' ? fmtINR(d.total) : ''}</b></div>
+      <div class="foot-b"><button type="button" class="cta" data-action="esign">Continue to e-sign</button></div>`;
+  } else if (t.n) {
+    f.innerHTML = `<div class="foot-l"><span>Optional protection total</span><b>${fmtINR(t.all)}</b></div>
+      <div class="foot-b"><button type="button" class="cta-2" data-action="decline" data-consent="decline">Skip</button><button type="button" class="cta" data-action="checkout" data-consent="checkout">Checkout with protection</button></div>`;
+  } else {
+    f.innerHTML = `<div class="foot-b"><button type="button" class="cta" data-action="decline" data-consent="decline">Continue without protection</button></div>`;
+  }
+}
+
+/* ---------- Sheets ---------- */
+function openSheet(s, opener) { state.sheet = s; state.sheetOpener = opener ? opener.dataset.fk : null; renderSheet(); }
+function closeSheet() {
+  state.sheet = null; $('#sheet-root').innerHTML = '';
+  const el = state.sheetOpener && $(`[data-fk="${state.sheetOpener}"]`); if (el) el.focus({ preventScroll: true });
+}
+function renderSheet() {
+  const s = state.sheet, root = $('#sheet-root'); if (!s) { root.innerHTML = ''; return; }
+  let h = '';
+  const head = (k, t) => `<div class="grip"></div><div class="sh-h"><div><div class="sh-k">${k}</div><h2 class="sh-t" id="sh-title">${t}</h2></div><button type="button" class="sh-x" data-action="close-sheet" aria-label="Close">×</button></div>`;
+  if (s.type === 'info' || s.type === 'consent') {
+    const it = findItem(s.kind, s.id); if (!it) { closeSheet(); return; }
+    const ins = s.kind !== 'vas', price = ins ? priceOf(it) : Object.values(state.vasAdded).some(Boolean) ? 0 : (selectedBundleFee() ?? 0);
+    const meta = ins ? `<dl class="sh-meta"><div><dt>Cover</dt><dd>${coverOf(it)}</dd></div><div><dt>Policy term</dt><dd>${it.termMonths} months</dd></div><div><dt>Reference premium incl. GST</dt><dd>${fmtINR(price)}</dd></div></dl>`
+                     : `<dl class="sh-meta two"><div><dt>Validity</dt><dd>${it.validity}</dd></div><div><dt>${price ? 'Reference VAS bundle fee incl. GST' : 'Additional service fee'}</dt><dd>${fmtINR(price)}</dd></div></dl>`;
+    if (s.type === 'info') {
+      h = head(ins ? 'Insurance · partner insurer' : 'Value-add service', it.name) + `<div class="sh-b">${meta}
+        <p style="font-size:13px">${it.desc}</p>
+        ${ins ? `<h3>What's covered</h3><ul>${it.benefits.map(b => `<li>${b}</li>`).join('')}</ul><h3>Not covered</h3><ul>${it.exclusions.map(b => `<li>${b}</li>`).join('')}</ul>
+        <p class="sh-fine">Policy term is separate from your ${state.profile.tenure}-month loan. Summary only, policy wording applies.</p>`
+        : '<p class="sh-fine">Value-add service by a partner provider. One VAS bundle fee applies to the selected insurance rate-card row, regardless of service count.</p>'}
+      </div><div class="sh-f"><button type="button" class="btn btn-ghost btn-lg" data-action="close-sheet">Close</button></div>`;
+    } else {
+      h = head(ins ? 'Insurance · your consent' : 'Value-add · your consent', `Add ${it.name}?`) + `<div class="sh-b">${meta}
+        <ul>${(ins ? it.benefits.slice(0, 2).concat(['Not covered: ' + it.exclusions[0].toLowerCase()]) : [it.desc, 'Value-add service by a partner provider']).map(b => `<li>${b}</li>`).join('')}</ul>
+        <p class="sh-fine">In a live journey, this would be paid separately at checkout. No payment is taken in this demo. ${ins ? 'Insurance free-look rights are subject to the issued policy.' : 'The VAS bundle is optional and its fee is charged only once. Provider service terms apply.'}</p>
+      </div><div class="sh-f">
+        <button type="button" class="btn btn-primary btn-lg" data-action="confirm-add" data-consent="confirm" data-kind="${s.kind}" data-id="${s.id}">I agree, add${price ? ' for ' + fmtINR(price) : ' at no extra charge'}</button>
+        <button type="button" class="btn btn-ghost btn-lg" data-action="close-sheet">Go back</button>
+      </div>`;
+    }
+  } else if (s.type === 'record') {
+    const d = state.decision;
+    h = head('Demo decision recorded', d.type === 'accepted' ? 'Selection recorded' : 'No protection added') + `<div class="sh-b">
+      ${d.type === 'accepted' ? `<ul class="rec" data-decision="accepted">${d.items.map(i => `<li><span>${i.name}<small>${i.kind === 'insurance' ? 'Insurance · ' + i.cover : 'Value-add service'}</small></span><b>${fmtINR(i.price)}</b></li>`).join('')}</ul>
+        <div class="tot" style="margin:8px -18px 0;border-top:1px solid var(--line)"><span>Reference total · no payment taken</span><b>${fmtINR(d.total)}</b></div>`
+      : '<p style="font-size:13px" data-decision="declined">Nothing was charged. You can add cover later from My loan.</p>'}
+      <p class="sh-fine mono">Ref ${d.recommendationId} · ${fmtTime(d.at)}</p>
+    </div><div class="sh-f">
+      <button type="button" class="btn btn-dark btn-lg" data-action="esign">Continue to e-sign</button>
+      <button type="button" class="btn btn-ghost btn-lg" data-action="close-sheet">Back to checkout</button>
+    </div>`;
+  }
+  root.innerHTML = `<div class="sheet-wrap" data-action="sheet-bg"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-title">${h}</div></div>`;
+  const x = $('.sh-x', root); if (x) x.focus();
+}
+function toast(msg) { const r = $('#toast-root'); r.innerHTML = `<div class="toast" role="status">${esc(msg)}</div>`; clearTimeout(toast.t); toast.t = setTimeout(() => { r.innerHTML = ''; }, 2400); }
+
+/* =====================================================================
+   6. PRESENTER UI: presets, levers, outcome, evidence
+   ===================================================================== */
+function ctlHTML(k, kind) {
+  const m = FIELD_META[k], id = 'c-' + k, lab = `<span class="ctl-l" id="${id}-l">${m.label}</span>`;
+  if (kind === 'text') return `<div class="ctl">${lab}<input class="in" data-field="${k}" aria-labelledby="${id}-l" autocomplete="off"></div>`;
+  if (kind === 'number') return `<div class="ctl">${lab}<input class="in" type="number" data-field="${k}" aria-labelledby="${id}-l" min="${m.min}" max="${m.max}" style="width:110px"></div>`;
+  if (kind === 'select') return `<div class="ctl">${lab}<select class="in" data-field="${k}" aria-labelledby="${id}-l">${m.options.map(o => `<option>${o}</option>`).join('')}</select></div>`;
+  if (kind === 'seg') return `<div class="ctl">${lab}<div class="seg" role="radiogroup" aria-labelledby="${id}-l" data-field="${k}">${m.options.map(o => `<button type="button" role="radio" data-value="${o}">${k === 'tenure' ? o + 'm' : o}</button>`).join('')}</div></div>`;
+  if (kind === 'switch') return `<div class="ctl">${lab}<button type="button" class="tg" role="switch" data-field="${k}" aria-labelledby="${id}-l"></button></div>`;
+  if (kind === 'stepper') return `<div class="ctl">${lab}<div class="stp" data-stepper="${k}" role="group" aria-labelledby="${id}-l"><button type="button" data-delta="-1" aria-label="Decrease ${m.label}">−</button><output data-display="${k}"></output><button type="button" data-delta="1" aria-label="Increase ${m.label}">+</button></div></div>`;
+  if (kind === 'range') return `<div class="ctl">${lab}<span class="ctl-v" data-display="${k}"></span><input class="rng" type="range" data-field="${k}" min="${m.min}" max="${m.max}" step="${m.step}" aria-labelledby="${id}-l"></div>`;
+}
+function buildLevers() {
+  $('#lever-groups').innerHTML = LEVER_GROUPS.map((g, i) => `<details class="card lv" data-group="${i}">
+    <summary><span class="lv-txt"><span class="lv-t">${g.title}</span><span class="lv-s" data-group-sum="${i}"></span></span><span class="chev"></span></summary>
+    <div class="lv-body">${g.fields.map(([k, t]) => ctlHTML(k, t)).join('')}</div></details>`).join('');
+}
+const presetOutcome = {};
+function renderPresets() {
+  $('#presets').innerHTML = Object.keys(PRESETS).map(id => {
+    const pr = PRESETS[id], on = state.activePreset === id, open = on && state.presetOpen === id;
+    if (!presetOutcome[id]) { const pp = Object.assign({}, pr.profile); pp.emi = calcEmi(pp.loanAmount, LOAN_RATES[pp.loanType], pp.tenure); presetOutcome[id] = SymboCheckoutEngine.recommend(pp); }
+    const r = presetOutcome[id];
+    return `<div class="pr-item"><button type="button" class="pr" data-action="preset" data-preset="${id}" aria-pressed="${on}" aria-expanded="${open}" data-fk="pr-${id}">
+        <span class="pr-k">${id}</span><span class="pr-n">${pr.label} <span class="pr-who">· ${pr.profile.name.split(' ')[0]}</span></span><span class="chev"></span></button>
+      <div class="pr-d" ${open ? '' : 'hidden'}><p>${pr.blurb}</p><div class="chips">${r.products.map(x => `<span class="chip">${x.id === 'pa' ? 'PA ' + fmtL(x.suggestedSI) : x.short}</span>`).join('')}${r.vas.length ? `<span class="chip svc">+${r.vas.length} service${r.vas.length > 1 ? 's' : ''}</span>` : ''}</div></div></div>`;
+  }).join('');
+  const el = state.focusPreset && $(`[data-fk="${state.focusPreset}"]`); if (el) { el.focus({ preventScroll: true }); state.focusPreset = null; }
+}
+
+function syncInputs(skip) {
+  const p = state.profile;
+  $$('input[data-field], select[data-field]').forEach(el => { if (el !== skip) el.value = p[el.dataset.field]; });
+  $$('[role=radiogroup][data-field]').forEach(g => { const v = String(p[g.dataset.field]); $$('[role=radio]', g).forEach(b => { const on = b.dataset.value === v; b.setAttribute('aria-checked', on); b.tabIndex = on ? 0 : -1; }); });
+  $$('[role=switch][data-field]').forEach(s => s.setAttribute('aria-checked', !!p[s.dataset.field]));
+  $$('[data-display]').forEach(el => { const k = el.dataset.display; el.textContent = (k === 'loanAmount' || k === 'emi' || k === 'monthlyIncome') ? fmtINR(p[k]) : p[k]; });
+  LEVER_GROUPS.forEach((g, i) => { const s = $(`[data-group-sum="${i}"]`); if (s) s.textContent = g.sum(p); });
+}
+
+function chip(x, cls = '') { return `<span class="chip ${cls}">${x.id === 'pa' ? 'PA ' + fmtL(x.suggestedSI) : x.name}</span>`; }
+function renderOutcome() {
+  const r = state.result, d = state.diff;
+  if (!d) {
+    $('#wc-line').textContent = 'Pick a preset or change a lever. Only the protection section updates.';
+    $('#wc-ba').innerHTML = `<span class="ba-k">Now</span><div class="chips">${r.products.map(x => chip(x)).join('')}</div>`;
+    $('#wc-body').innerHTML = `<ul class="why">${r.reasons.slice(0, 3).map(x => `<li>${esc(x)}</li>`).join('')}</ul>`;
+    $('#wc-time').textContent = '';
+  } else {
+    const list = (res, other, mark) => res.products.map(x => chip(x, other.products.some(o => o.id === x.id) ? '' : mark)).join('') || '<span class="mini">None</span>';
+    $('#wc-line').textContent = d.headline;
+    $('#wc-ba').innerHTML = `<span class="ba-k">Before</span><div class="chips">${list(d.before, d.after, 'rem')}</div><span class="ba-k">After</span><div class="chips">${list(d.after, d.before, 'add')}</div>`;
+    const prod = [...d.added.map(x => `<span class="chip add">+ ${x.name}</span>`), ...d.removed.map(x => `<span class="chip rem">${x.name}</span>`)].join('') || '<span class="mini">No change</span>';
+    const vas = [...d.vasAdded.map(v => `<span class="chip add">+ ${v.name}</span>`), ...d.vasRemoved.map(v => `<span class="chip rem">${v.name}</span>`)].join('') || '<span class="mini">No change</span>';
+    const si = d.siBefore === d.siAfter ? `<span class="mini">${d.siAfter ? fmtLakh(d.siAfter) : '-'}, no change</span>` : `${d.siBefore ? fmtLakh(d.siBefore) : '-'} → <b>${d.siAfter ? fmtLakh(d.siAfter) : '-'}</b>`;
+    const price = d.totalBefore === d.totalAfter ? `<span class="mini">${fmtINR(d.totalAfter)}, no change</span>` : `${fmtINR(d.totalBefore)} → <b>${fmtINR(d.totalAfter)}</b>`;
+    $('#wc-body').innerHTML = `<dl class="kv"><dt>Products</dt><dd data-wc="products">${prod}</dd><dt>PA sum insured</dt><dd data-wc="si">${si}</dd><dt>Services</dt><dd data-wc="vas">${vas}</dd><dt>Proposed price</dt><dd data-wc="price">${price}</dd></dl>
+      <p class="mini" style="margin-top:6px">Price if every suggestion were added. It moves with cover, not as a goal.</p>
+      <ul class="why">${d.reasons.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`;
+    $('#wc-time').textContent = fmtClock(d.at);
+    if (d.changedAny) { const c = $('#what-changed'); c.classList.remove('flash'); void c.offsetWidth; c.classList.add('flash'); }
+  }
+  const dec = state.decision;
+  $('#sl-status').innerHTML = dec ? (dec.type === 'accepted' ? '<span class="badge b-green">Accepted</span>' : '<span class="badge b-plain">Declined</span>') : state.notice ? '<span class="badge b-review">Review</span>' : '<span class="badge b-plain">Pending</span>';
+  $('#sl-sum').textContent = `${r.products.length} insurance · ${r.vas.length} service${r.vas.length === 1 ? '' : 's'} · ${fmtINR(proposedTotal(r))}`;
+  $('#sl-body').innerHTML = r.products.map(x => `<div class="sl"><span><b>${esc(x.name)}</b><br><span class="mini">${coverOf(x)} · ${x.termMonths}-month policy</span></span><span>${fmtINR(priceOf(x))}</span></div>`).join('')
+    + r.vas.map(v => `<div class="sl"><span>${esc(v.name)} <span class="chip svc">Service</span></span><span class="mini">In bundle</span></div>`).join('')
+    + (r.vas.length ? `<div class="sl"><span class="mini">Optional VAS bundle fee, once</span><span>${fmtINR(SymboCheckoutEngine.indicativeBundleFee(r) ?? 0)}</span></div>` : '')
+    + `<div class="sl"><span class="mini">Not shortlisted</span><span class="mini" style="text-align:right">${r.notRecommended.map(n => n.name).join(', ') || '-'}</span></div>`;
+}
+
+function buildEvidence() {
+  const r = state.result, d = state.decision;
+  return {
+    label: 'Demo evidence generated in this browser. Not a production audit record or binding insurance quote.',
+    recommendationId: r.recommendationId, ruleVersion: r.ruleVersion, generatedAt: r.generatedAt,
+    shownAt: state.presentedAt ? state.presentedAt.toISOString() : null,
+    profileSignals: r.signals,
+    mappedEngineSignals: SymboCheckoutEngine.toCore(state.profile), assumptions: r.assumptions || [],
+    suitabilityScores: r.engineResult?.scores || [],
+    productsPresented: r.products.map(x => ({ id: x.id, name: x.name, rateCardId: x.id === 'pa' ? paOpt(x).rateId : x.rateId, coverShown: coverOf(x), policyTermMonths: x.termMonths, referencePremiumInclGst: priceOf(x), added: !!state.added[x.id] })),
+    servicesPresented: r.vas.map(v => ({ id: v.id, name: v.name, added: !!state.vasAdded[v.id] })),
+    vasBundle: { rule: 'primary-selected-rate-row-once', referenceFeeInclGst: selectedBundleFee() ?? SymboCheckoutEngine.indicativeBundleFee(r), selectedFeeInclGst: Object.values(state.vasAdded).some(Boolean) ? selectedBundleFee() : 0 },
+    notShortlisted: r.notRecommended,
+    customerAction: d ? { status: d.type, items: d.items.map(i => ({ name: i.name, kind: i.kind, price: i.price })), total: d.total, at: d.at.toISOString() } : { status: state.notice ? 'pending (reset after quote change)' : 'pending', at: null },
+    events: state.events.map(e => ({ at: e.at.toISOString(), type: e.type, text: e.text }))
+  };
+}
+function renderEvidence() {
+  if (!state.result) return;
+  const ev = buildEvidence(), a = ev.customerAction;
+  $('#ev-sum').textContent = ev.recommendationId;
+  $('#ev-main').innerHTML = `<table class="ev-t"><tbody>
+    <tr><td class="mini">Recommendation ID</td><td class="mono" data-ev="recommendation-id">${ev.recommendationId}</td></tr>
+    <tr><td class="mini">Rule version</td><td class="mono" data-ev="rule-version">${ev.ruleVersion}</td></tr>
+    <tr><td class="mini">Shown</td><td>${ev.shownAt ? fmtTime(new Date(ev.shownAt)) : '-'}</td></tr>
+    <tr><td class="mini">Presented</td><td data-ev="products">${ev.productsPresented.map(x => `${esc(x.name)}: ${x.coverShown}, ${fmtINR(x.referencePremiumInclGst)}`).join('<br>')}${ev.servicesPresented.length ? '<br>' + ev.servicesPresented.map(v => `${esc(v.name)} (service)`).join('<br>') + `<br>VAS bundle once: ${fmtINR(ev.vasBundle.referenceFeeInclGst ?? 0)}` : ''}</td></tr>
+    <tr><td class="mini">Customer action</td><td data-ev="customer-action">${a.status === 'accepted' ? `Accepted ${a.items.length} · ${fmtINR(a.total)}` : a.status === 'declined' ? 'Declined, continued without' : a.status}</td></tr>
+    <tr><td class="mini">Timestamp</td><td data-ev="action-at">${a.at ? fmtTime(new Date(a.at)) : '-'}</td></tr>
+  </tbody></table>`;
+  $('#ev-signals').innerHTML = `<table class="ev-t" data-ev="signals"><tbody>${ev.profileSignals.map(s => `<tr><td>${s.label}</td><td><b>${esc(fmtField(s.key, s.value))}</b></td><td class="mini">${s.source}</td></tr>`).join('')}</tbody></table>`;
+  $('#ev-log').innerHTML = state.events.map(e => `<li><span class="mono mini">${fmtClock(e.at)}</span><span>${esc(e.text)}</span></li>`).join('');
+}
+
+/* =====================================================================
+   7. EVENTS
+   ===================================================================== */
+const scopeOf = el => el.closest('#phone') ? 'phone' : 'console';
+function loadPreset(id) {
+  state.activePreset = id; state.presetOpen = id;
+  const pp = Object.assign({}, PRESETS[id].profile); pp.emi = calcEmi(pp.loanAmount, LOAN_RATES[pp.loanType], pp.tenure);
+  setProfile(pp, { source: 'preset', preset: id, force: true });
+}
+function afterChoice() { renderModule(); renderFooter(); renderOutcome(); renderEvidence(); }
+function reviewBundleChange(before) {
+  const after = selectedBundleKey();
+  if (before !== after && Object.values(state.vasAdded).some(Boolean)) {
+    state.vasAdded = {}; state.notice = true;
+    logEvent('consent', 'VAS selection returned to review because the selected insurance tier changed the bundle fee');
+  }
+}
+
+const ACTIONS = {
+  noop: () => {},
+  help: () => toast('LoanBee support is outside this demo.'),
+  preset: el => {
+    const id = el.dataset.preset; state.focusPreset = el.dataset.fk;
+    if (state.activePreset === id) { state.presetOpen = state.presetOpen === id ? null : id; renderPresets(); }
+    else loadPreset(id);
+  },
+  'play-demo': el => {
+    el.disabled = true; el.textContent = 'Showing B';
+    loadPreset('B');
+    setTimeout(() => { loadPreset('C'); el.textContent = 'Play B → C'; el.disabled = false; $('#wc-more').open = true; }, 1700);
+  },
+  'toggle-module': () => { state.moduleOpen = !state.moduleOpen; renderModule(); },
+  info: el => { logEvent('terms', `Viewed terms: ${findItem(el.dataset.kind, el.dataset.id).name}`); openSheet({ type: 'info', kind: el.dataset.kind, id: el.dataset.id }, el); renderEvidence(); },
+  add: el => {
+    if (el.dataset.kind === 'vas' && selectedBundleFee() == null) { toast('Choose an insurance cover first to see the VAS bundle fee.'); return; }
+    openSheet({ type: 'consent', kind: el.dataset.kind, id: el.dataset.id }, el);
+  },
+  'confirm-add': el => {
+    const k = el.dataset.kind, id = el.dataset.id, it = findItem(k, id);
+    const before = selectedBundleKey();
+    const itemPrice = k === 'vas' ? Object.values(state.vasAdded).some(Boolean) ? 0 : selectedBundleFee() : priceOf(it);
+    (k === 'vas' ? state.vasAdded : state.added)[id] = true;
+    state.decision = null; state.notice = false;
+    if (k !== 'vas') reviewBundleChange(before);
+    logEvent('consent', `Consent given: ${it.name} · ${fmtINR(itemPrice)}`);
+    state.sheetOpener = 'rm-' + id; closeSheet(); afterChoice();
+    const b = $(`[data-fk="rm-${id}"]`); if (b) b.focus({ preventScroll: true });
+  },
+  remove: el => {
+    const k = el.dataset.kind, id = el.dataset.id;
+    const before = selectedBundleKey();
+    (k === 'vas' ? state.vasAdded : state.added)[id] = false; state.decision = null;
+    if (k !== 'vas') reviewBundleChange(before);
+    logEvent('consent', `Removed: ${findItem(k, id).name}`);
+    afterChoice(); const b = $(`[data-fk="add-${id}"]`); if (b) b.focus({ preventScroll: true });
+  },
+  'set-si': el => {
+    const si = Number(el.dataset.si); if (si === state.paSI) return;
+    const before = selectedBundleKey();
+    state.paSI = si; logEvent('selection', `PA sum insured set to ${fmtLakh(si)}`);
+    if (state.added.pa) { state.added.pa = false; state.decision = null; reviewBundleChange(before); afterChoice(); openSheet({ type: 'consent', kind: 'product', id: 'pa' }, el); }
+    else afterChoice();
+  },
+  checkout: () => {
+    const items = chosen();
+    state.decision = { type: 'accepted', items, total: totals().all, at: new Date(), recommendationId: state.result.recommendationId };
+    logEvent('decision', `Checkout with protection: ${items.map(i => i.name).join(', ')} · ${fmtINR(state.decision.total)}`);
+    // Browser demo only: no payment, issuance or server-side audit POST occurs.
+    state.notice = false; afterChoice(); state.sheetOpener = null; openSheet({ type: 'record' });
+  },
+  decline: () => {
+    state.added = {}; state.vasAdded = {}; state.notice = false;
+    state.decision = { type: 'declined', items: [], total: 0, at: new Date(), recommendationId: state.result.recommendationId };
+    logEvent('decision', 'Continued without protection');
+    afterChoice(); state.sheetOpener = null; openSheet({ type: 'record' });
+  },
+  esign: () => { logEvent('loan', 'Continued to e-sign'); renderEvidence(); if (state.sheet) closeSheet(); toast('Demo ends here. LoanBee handles e-sign.'); },
+  'close-sheet': () => closeSheet(),
+  'sheet-bg': (el, e) => { if (e.target === el) closeSheet(); },
+  'copy-evidence': () => {
+    const txt = JSON.stringify(buildEvidence(), null, 2);
+    (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast('Evidence JSON copied'), () => { console.log(txt); toast('Clipboard blocked. JSON logged to console.'); });
+  },
+  drawer: el => { const id = el.dataset.drawer; $$('.side').forEach(s => s.classList.toggle('open', s.id === id)); $('#scrim').classList.add('open'); },
+  'close-drawers': () => { $$('.side').forEach(s => s.classList.remove('open')); $('#scrim').classList.remove('open'); }
+};
+
+document.addEventListener('click', e => {
+  const radio = e.target.closest('[role=radio][data-value]'), g = radio && radio.closest('[role=radiogroup][data-field]');
+  if (g) { setProfile({ [g.dataset.field]: parseVal(g.dataset.field, radio.dataset.value) }, { source: scopeOf(g) }); return; }
+  const sw = e.target.closest('[role=switch][data-field]');
+  if (sw) { setProfile({ [sw.dataset.field]: !state.profile[sw.dataset.field] }, { source: scopeOf(sw) }); return; }
+  const st = e.target.closest('[data-stepper] [data-delta]');
+  if (st) { const k = st.closest('[data-stepper]').dataset.stepper; setProfile({ [k]: state.profile[k] + Number(st.dataset.delta) }, { source: scopeOf(st) }); return; }
+  const act = e.target.closest('[data-action]');
+  if (act && ACTIONS[act.dataset.action] && !act.disabled) ACTIONS[act.dataset.action](act, e);
+});
+document.addEventListener('input', e => {
+  const el = e.target;
+  if (el.matches('input[data-field]')) { const k = el.dataset.field; if (el.type === 'number' && el.value === '') return; setProfile({ [k]: parseVal(k, el.value) }, { source: scopeOf(el) }); }
+});
+document.addEventListener('change', e => {
+  const el = e.target;
+  if (el.matches('select[data-field]')) setProfile({ [el.dataset.field]: el.value }, { source: scopeOf(el) });
+  if (el.matches('input[type=number][data-field]')) syncInputs(null);
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { if (state.sheet) closeSheet(); else ACTIONS['close-drawers'](); return; }
+  const r = e.target.closest && e.target.closest('[role=radio]');
+  if (!r || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
+  const list = $$('[role=radio]', r.closest('[role=radiogroup]')).filter(b => !b.disabled);
+  const n = list[(list.indexOf(r) + (e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : -1) + list.length) % list.length];
+  e.preventDefault(); n.click();
+  const t = n.dataset.fk ? $(`[data-fk="${n.dataset.fk}"]`) : n; if (t) t.focus();
+});
+document.addEventListener('focusin', e => {
+  const sh = state.sheet && $('#sheet-root .sheet');
+  if (sh && !sh.contains(e.target)) { const x = $('.sh-x', sh); if (x) x.focus(); }
+});
+
+/* =====================================================================
+   8. PUBLIC INTEGRATION HOOKS (stable)
+   window.LoanBeeDemo.setProfile(patch)    merge a partial profile, recompute, render
+   window.LoanBeeDemo.renderResult(result) render a suitability + pricing response
+   ===================================================================== */
+window.LoanBeeDemo = {
+  setProfile: patch => setProfile(patch || {}, { source: 'api' }),
+  renderResult: result => { state.baseline = state.result; renderResult(result, { source: 'api' }); },
+  getProfile: () => Object.assign({}, state.profile),
+  getResult: () => state.result,
+  getEvidence: () => buildEvidence(),
+  loadPreset: id => PRESETS[id] && loadPreset(id),
+  suitabilityEngine: SymboCheckoutEngine, presets: PRESETS
+};
+
+/* ---------- init ---------- */
+const SYMBO_LOGO = $('#symbo-logo').src;
+buildLevers();
+syncInputs(null);
+renderLoan(false);
+renderResult(SymboCheckoutEngine.recommend(state.profile), { source: 'init' });
+</script>
+</body>
+</html>
