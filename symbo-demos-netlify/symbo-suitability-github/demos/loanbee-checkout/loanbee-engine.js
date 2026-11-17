@@ -75,6 +75,11 @@
     });
     const vasRanked = core.vasRanking(mapped, top.map(r => r.id));
     const vasIds = core.topVas(vasRanked);
+    // Demo bundle pairing: EMI Protect includes Doctor on Call / Chat when the catalogue ranks it as relevant.
+    if (products.some(x => x.id === 'emi')) {
+      const doctor = vasRanked.find(x => /doctor on call/i.test(x.name));
+      if (doctor) { const at = vasIds.indexOf(doctor.id); if (at >= 0) vasIds.splice(at, 1); vasIds.unshift(doctor.id); }
+    }
     const shortLowNeed = p.tenure <= 6 && p.dependants <= 1 && !p.businessOwner && !p.digitalFirst && p.vectorExposure === 'Low';
     const limit = shortLowNeed ? 1 : Math.min(4, 1 + Number(p.tenure >= 12) + Number(p.dependants >= 2 || p.digitalFirst) + Number(p.businessOwner || p.vectorExposure === 'High'));
     const vas = products.length ? vasIds.slice(0, limit).map(id => {
@@ -94,7 +99,7 @@
       assumptions: ['Monthly income is entered in the presenter controls.', 'Consumer-durable and two-wheeler loans use the personal-loan suitability rule in this demo.',
         'Marital status is inferred only for rule validation; borrower status, MSME status, single-income status and health exposure use neutral demo defaults.',
         'Hospital-cash preference and high vector exposure add explicit checkout priority; up to three insurance products are shown.',
-        'VAS suggestions come from the Symbo catalogue. The source rate card supplies one bundle fee, not per-service prices.'],
+        'VAS suggestions come from the Symbo catalogue. The EMI Protect / Doctor on Call pairing is an illustrative demo rule. The source rate card supplies one bundle fee, not per-service prices.'],
       referenceOnly: true, engineResult: { scores: ranked.map(r => ({ id: r.id, baseScore: r.score, checkoutScore: r.checkoutScore, reasons: r.reasons })) } };
   }
   function bundleFee(result, added, paSI) {
