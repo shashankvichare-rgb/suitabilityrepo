@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+<script src="./icons-tabler.js"></script>
+<script src="./petins/config.js"></script>
+<script src="./petins/engine.js"></script>
+<script src="./petins/api.js"></script>
+<script src="./petins/policy-doc.js"></script>
+<style>
+:root{--brand:#D3434F;--brand-dark:#B8333F;--brand-ink:#C23C48;--tint:#FDF0EF;--tint2:#F9E3E0;--ink:#2A2629;--muted:#5E575B;--line:#EFE5DF;--bg:#FBF6F2;--card:#fff;--ok:#23885C;--ok-tint:#E9F6EF;--font:'Nunito',system-ui,sans-serif}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);-webkit-font-smoothing:antialiased}
+a{color:var(--brand-ink);text-decoration:none}
+a:hover{color:var(--brand-dark)}
+button,input,select{font-family:inherit}
+input::placeholder{color:#A39BA0;font-weight:500}
+iconify-icon{display:inline-block;flex:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</helmet>
+<div style="min-height:100vh;background:var(--bg);color:var(--ink);font-family:var(--font);padding-bottom:110px">
+
+<header style="position:sticky;top:0;z-index:30;background:var(--card);border-bottom:1px solid var(--line)">
+  <div style="max-width:1080px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:12px;min-height:60px">
+    <sc-if value="{{ hasLogo }}" hint-placeholder-val="{{ false }}"><img src="{{ logo }}" alt="{{ partnerName }}" style="height:32px;display:block"></sc-if>
+    <sc-if value="{{ noLogo }}" hint-placeholder-val="{{ false }}"><span style="font-size:22px;font-weight:800;color:var(--brand);letter-spacing:-.02em">{{ partnerLower }}</span></sc-if>
+    <div style="border-left:1px solid var(--line);padding-left:10px;font-size:11.5px;font-weight:700;color:var(--muted);line-height:1.25;white-space:nowrap">Pet Health Insurance<br>powered by <span style="color:var(--ink);font-weight:800">Symbo</span></div>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+      <sc-if value="{{ showSaved }}" hint-placeholder-val="{{ false }}"><span style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:700;color:var(--muted)"><iconify-icon icon="tabler:cloud-check" width="16" style="color:var(--ok)"></iconify-icon>Saved</span></sc-if>
+      <sc-if value="{{ canSave }}" hint-placeholder-val="{{ false }}"><button onClick="{{ openSave }}" style="height:40px;border:1.5px solid var(--line);background:var(--card);border-radius:999px;padding:0 12px;display:flex;align-items:center;gap:6px;font-weight:800;font-size:13.5px;color:var(--ink);cursor:pointer"><iconify-icon icon="tabler:bookmark" width="17" style="color:var(--brand)"></iconify-icon>Save for later</button></sc-if>
+    </div>
+  </div>
+</header>
+
+<sc-if value="{{ loading }}" hint-placeholder-val="{{ true }}">
+  <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:120px 16px;color:var(--muted);font-weight:700"><span style="width:32px;height:32px;border-radius:50%;border:3px solid var(--tint2);border-top-color:var(--brand);animation:spin .8s linear infinite"></span>Loading your quote…</div>
+</sc-if>
+
+<sc-if value="{{ ready }}" hint-placeholder-val="{{ false }}">
+<div style="max-width:1080px;margin:0 auto;padding:18px 16px 0;display:flex;flex-direction:column;gap:16px">
+
+  <sc-if value="{{ resumeBanner }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;align-items:center;gap:12px;background:var(--ok-tint);border-radius:14px;padding:12px 14px;font-size:14px;font-weight:700;color:var(--ink)"><iconify-icon icon="tabler:history" width="20" style="color:var(--ok)"></iconify-icon><span style="flex:1">Welcome back{{ firstNameComma }} You're back where you left off.</span><button onClick="{{ hideResume }}" aria-label="Dismiss" style="border:none;background:none;cursor:pointer;color:var(--muted);display:flex;width:32px;height:32px;align-items:center;justify-content:center"><iconify-icon icon="tabler:x" width="18"></iconify-icon></button></div>
+  </sc-if>
+
+  <sc-if value="{{ showProgress }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <h1 style="margin:0;font-size:clamp(22px,3vw,28px);font-weight:800;letter-spacing:-.015em;line-height:1.15">{{ stepTitle }}</h1>
+      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px 12px;font-size:13px;font-weight:700;color:var(--muted)"><span style="white-space:nowrap">Step {{ stepNum }} of 3 · {{ stepLabel }}</span><span style="display:flex;align-items:center;gap:4px"><iconify-icon icon="tabler:clock" width="15"></iconify-icon>{{ timeLeft }}</span></div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+        <sc-for list="{{ bars }}" as="b" hint-placeholder-count="3"><span style="height:5px;border-radius:3px;background:{{ b.c }};transition:background .3s"></span></sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start">
+  <main style="flex:1 1 480px;min-width:0;max-width:640px;display:flex;flex-direction:column;gap:14px">
+
+    <sc-if value="{{ isVerify }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="00 Verify mobile" style="display:flex;flex-direction:column;gap:14px">
+        <div style="background:var(--tint);border-radius:18px;padding:18px;display:flex;align-items:center;gap:14px">
+          <div style="width:52px;height:52px;border-radius:50%;background:var(--card);display:flex;align-items:center;justify-content:center"><iconify-icon icon="{{ petIcon }}" width="28" style="color:var(--brand)"></iconify-icon></div>
+          <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;color:var(--muted)">Your quote · {{ petSummary }}</div><div style="font-size:26px;font-weight:800;letter-spacing:-.02em">{{ totalLabel }} <span style="font-size:14px;font-weight:700;color:var(--muted)">for 3 years</span></div></div>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:14px">
+          <div><h2 style="margin:0 0 4px;font-size:19px;font-weight:800">Verify your mobile number</h2><div style="font-size:14px;color:var(--muted);font-weight:600">We use it to save your quote and send your policy.</div></div>
+          <sc-if value="{{ sso }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;gap:10px;align-items:center;background:var(--ok-tint);border-radius:12px;padding:12px 14px;font-size:14px;font-weight:700"><iconify-icon icon="tabler:circle-check-filled" width="20" style="color:var(--ok)"></iconify-icon>Verified through your {{ ssoLabel }} · +91 {{ mobile }}</div>
+          </sc-if>
+          <sc-if value="{{ needOtp }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <label style="font-size:13px;font-weight:700;color:var(--muted)">Mobile number</label>
+              <div style="display:flex;gap:8px">
+                <div style="flex:1;display:flex;align-items:center;gap:8px;height:50px;border:1.5px solid {{ F.mobile.bd }};border-radius:12px;padding:0 14px;background:var(--card)"><span style="font-weight:700;color:var(--muted)">+91</span><input value="{{ F.mobile.v }}" onChange="{{ F.mobile.set }}" inputmode="numeric" placeholder="10-digit mobile number" disabled="{{ otpSent }}" style="border:none;outline:none;flex:1;min-width:0;font-size:16px;font-weight:700;color:var(--ink);background:transparent;letter-spacing:.03em"></div>
+                <sc-if value="{{ otpSent }}" hint-placeholder-val="{{ false }}"><button onClick="{{ changeMobile }}" style="border:none;background:none;color:var(--brand-ink);font-weight:800;font-size:14px;cursor:pointer;padding:0 6px">Change</button></sc-if>
+              </div>
+              <sc-if value="{{ F.mobile.err }}" hint-placeholder-val="{{ false }}"><div style="font-size:12.5px;font-weight:700;color:#D92D20">{{ F.mobile.err }}</div></sc-if>
+            </div>
+            <sc-if value="{{ otpSent }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <label style="font-size:13px;font-weight:700;color:var(--muted)">Enter the 6-digit OTP sent to +91 {{ mobile }}</label>
+                <input value="{{ F.otp.v }}" onChange="{{ F.otp.set }}" inputmode="numeric" autocomplete="one-time-code" placeholder="••••••" style="height:56px;border:1.5px solid {{ F.otp.bd }};border-radius:12px;padding:0 16px;font-size:24px;font-weight:800;letter-spacing:.5em;text-align:center;color:var(--ink);outline:none;background:var(--card);width:100%">
+                <div style="display:flex;justify-content:space-between;gap:8px;font-size:13px;font-weight:700"><span style="color:#D92D20">{{ F.otp.err }}</span><button onClick="{{ resendOtp }}" disabled="{{ resendDisabled }}" style="border:none;background:none;padding:0;cursor:pointer;font-weight:800;font-size:13px;color:{{ resendColor }}">{{ resendLabel }}</button></div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ showHints }}" hint-placeholder-val="{{ false }}"><div style="font-size:12.5px;font-weight:700;color:var(--muted);display:flex;gap:6px;align-items:center"><iconify-icon icon="tabler:flask" width="15"></iconify-icon>Demo OTP: 123456</div></sc-if>
+          </sc-if>
+          <div style="font-size:12px;color:var(--muted);font-weight:600;line-height:1.5">By continuing you agree to be contacted about this request and accept the Privacy Policy.</div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isCover }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="01 Coverages" style="display:flex;flex-direction:column;gap:14px">
+        <div style="background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0;font-size:17px;font-weight:800">Pets on this policy</h2><span style="font-size:12.5px;font-weight:700;color:var(--muted)">Up to {{ maxPets }}</span></div>
+          <sc-for list="{{ petRows }}" as="p" hint-placeholder-count="1">
+            <div style="border:1.5px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;align-items:center;gap:12px">
+                <div style="width:42px;height:42px;border-radius:50%;background:var(--tint);display:flex;align-items:center;justify-content:center"><iconify-icon icon="{{ p.icon }}" width="22" style="color:var(--brand)"></iconify-icon></div>
+                <div style="flex:1;min-width:0"><div style="font-weight:800;font-size:15px">{{ p.title }}</div><div style="font-size:13px;font-weight:600;color:var(--muted)">{{ p.sub }}</div></div>
+                <button onClick="{{ p.toggleEdit }}" style="border:none;background:none;color:var(--brand-ink);font-weight:800;font-size:13.5px;cursor:pointer;display:flex;align-items:center;gap:4px;height:40px"><iconify-icon icon="tabler:pencil" width="15"></iconify-icon>{{ p.editLabel }}</button>
+                <sc-if value="{{ p.canRemove }}" hint-placeholder-val="{{ false }}"><button onClick="{{ p.remove }}" aria-label="Remove pet" style="border:none;background:none;color:var(--muted);cursor:pointer;width:36px;height:40px;display:flex;align-items:center;justify-content:center"><iconify-icon icon="tabler:trash" width="18"></iconify-icon></button></sc-if>
+              </div>
+              <sc-if value="{{ p.editing }}" hint-placeholder-val="{{ false }}">
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;border-top:1px dashed var(--line);padding-top:10px">
+                  <div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:12.5px;font-weight:700;color:var(--muted)">Pet</label><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px"><sc-for list="{{ p.types }}" as="t" hint-placeholder-count="2"><button onClick="{{ t.onClick }}" style="height:44px;border:1.5px solid {{ t.bd }};background:{{ t.bg }};border-radius:10px;font-weight:800;font-size:14px;cursor:pointer;color:var(--ink);display:flex;align-items:center;justify-content:center;gap:6px"><iconify-icon icon="{{ t.icon }}" width="18"></iconify-icon>{{ t.label }}</button></sc-for></div></div>
+                  <div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:12.5px;font-weight:700;color:var(--muted)">Breed</label><select value="{{ p.breed }}" onChange="{{ p.setBreed }}" style="height:44px;border:1.5px solid var(--line);border-radius:10px;padding:0 10px;font-size:14.5px;font-weight:700;color:var(--ink);background:var(--card)"><sc-for list="{{ p.breeds }}" as="b" hint-placeholder-count="6"><option value="{{ b }}">{{ b }}</option></sc-for></select></div>
+                  <div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:12.5px;font-weight:700;color:var(--muted)">Age</label><div style="display:flex;align-items:center;gap:4px;background:var(--bg);border-radius:10px;padding:3px"><button onClick="{{ p.ageDown }}" aria-label="Younger" style="width:38px;height:38px;border:none;border-radius:8px;background:var(--card);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--ink)"><iconify-icon icon="tabler:minus" width="16"></iconify-icon></button><span style="flex:1;text-align:center;font-weight:800;font-size:14px">{{ p.ageLabel }}</span><button onClick="{{ p.ageUp }}" aria-label="Older" style="width:38px;height:38px;border:none;border-radius:8px;background:var(--card);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--ink)"><iconify-icon icon="tabler:plus" width="16"></iconify-icon></button></div></div>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+          <sc-if value="{{ canAddPet }}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{ addPet }}" style="height:50px;border:1.5px dashed var(--brand);background:var(--tint);border-radius:14px;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:800;font-size:14.5px;color:var(--brand-ink);cursor:pointer"><iconify-icon icon="tabler:plus" width="18"></iconify-icon>Add another pet<span style="background:var(--brand);color:#fff;font-size:11.5px;padding:3px 8px;border-radius:999px">10% off</span></button>
+          </sc-if>
+        </div>
+
+        <div style="background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px"><div><h2 style="margin:0;font-size:17px;font-weight:800">Plan details</h2><div style="font-size:13px;font-weight:600;color:var(--muted)">{{ productName }} · {{ insurerShort }}</div></div><span style="font-size:12px;font-weight:800;color:var(--ok);background:var(--ok-tint);padding:4px 10px;border-radius:999px">Recommended</span></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12.5px;font-weight:700;color:var(--muted)">Sum insured</span><span style="height:46px;border:2px solid var(--brand);background:var(--tint);border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px">₹5L <span style="font-size:12px;font-weight:700;color:var(--muted);margin-left:4px">/ year</span></span></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12.5px;font-weight:700;color:var(--muted)">Policy term</span><span style="height:46px;border:2px solid var(--brand);background:var(--tint);border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px">3 years</span></div>
+          </div>
+          <div style="font-size:12.5px;font-weight:600;color:var(--muted)">Sum insured options are indicative. They come from the Bajaj sum insured master.</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px">
+            <sc-for list="{{ benefits }}" as="b" hint-placeholder-count="6">
+              <div style="display:flex;gap:10px;align-items:flex-start;background:var(--bg);border-radius:12px;padding:10px 12px"><iconify-icon icon="{{ b.icon }}" width="19" style="color:var(--brand);margin-top:1px"></iconify-icon><div style="font-size:13.5px;line-height:1.35"><div style="font-weight:800">{{ b.t }}</div><div style="color:var(--muted);font-weight:600">{{ b.d }}</div></div></div>
+            </sc-for>
+          </div>
+        </div>
+
+        <button onClick="{{ toggleWaiver }}" style="text-align:left;border:2px solid {{ waiverBd }};background:{{ waiverBg }};border-radius:18px;padding:16px;display:flex;gap:14px;align-items:flex-start;cursor:pointer;color:var(--ink)">
+          <div style="width:44px;height:44px;border-radius:12px;background:var(--card);display:flex;align-items:center;justify-content:center;flex:none"><iconify-icon icon="tabler:hourglass-low" width="22" style="color:var(--brand)"></iconify-icon></div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:3px"><div style="font-size:15.5px;font-weight:800">Cover existing conditions in 12 months</div><div style="font-size:13.5px;font-weight:600;color:var(--muted);line-height:1.45">Instead of 36. Worth it if your pet already has a condition.</div><div style="font-size:14px;font-weight:800;margin-top:2px">+{{ waiverPrice }} <span style="font-weight:600;color:var(--muted);font-size:12.5px">for 3 years, incl. GST</span></div></div>
+          <span style="width:46px;height:28px;border-radius:999px;background:{{ waiverTrack }};position:relative;flex:none;transition:background .2s"><span style="position:absolute;top:3px;left:{{ waiverKnob }}px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:left .2s"></span></span>
+        </button>
+
+        <div style="background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:10px">
+          <h2 style="margin:0;font-size:17px;font-weight:800">Offer code</h2>
+          <sc-if value="{{ couponApplied }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:10px;background:var(--ok-tint);border-radius:12px;padding:10px 12px"><iconify-icon icon="tabler:discount-check" width="22" style="color:var(--ok)"></iconify-icon><div style="flex:1"><div style="font-weight:800;font-size:14.5px">{{ couponCode }} applied</div><div style="font-size:13px;font-weight:600;color:var(--muted)">You save {{ couponSave }}</div></div><button onClick="{{ removeCoupon }}" style="border:none;background:none;color:var(--brand-ink);font-weight:800;font-size:13.5px;cursor:pointer">Remove</button></div>
+          </sc-if>
+          <sc-if value="{{ couponOpen }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;gap:8px"><input value="{{ F.coupon.v }}" onChange="{{ F.coupon.set }}" placeholder="Enter code" style="flex:1;min-width:0;height:46px;border:1.5px solid {{ F.coupon.bd }};border-radius:12px;padding:0 14px;font-size:15px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink);outline:none;background:var(--card)"><button onClick="{{ applyCoupon }}" style="height:46px;border:1.5px solid var(--ink);background:var(--card);border-radius:12px;padding:0 18px;font-weight:800;font-size:14.5px;cursor:pointer;color:var(--ink)">Apply</button></div>
+            <sc-if value="{{ F.coupon.err }}" hint-placeholder-val="{{ false }}"><div style="font-size:12.5px;font-weight:700;color:#D92D20">{{ F.coupon.err }}</div></sc-if>
+            <sc-if value="{{ showHints }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ couponChips }}" as="c" hint-placeholder-count="2"><button onClick="{{ c.onClick }}" style="border:1px dashed var(--brand);background:var(--tint);color:var(--brand-ink);border-radius:999px;padding:5px 10px;font-weight:800;font-size:12.5px;cursor:pointer;white-space:nowrap">{{ c.code }} · {{ c.label }}</button></sc-for></div></sc-if>
+          </sc-if>
+        </div>
+
+        <label style="display:flex;gap:12px;align-items:flex-start;background:var(--card);border:1.5px solid {{ confirmBd }};border-radius:16px;padding:14px 16px;cursor:pointer">
+          <input type="checkbox" checked="{{ confirm }}" onChange="{{ toggleConfirm }}" style="width:20px;height:20px;accent-color:var(--brand);margin-top:1px;flex:none">
+          <span style="font-size:13.5px;line-height:1.5;font-weight:600">I confirm the details and health declaration are correct, and I accept the <a href="#">Terms &amp; Conditions</a> and <a href="#">Privacy Policy</a>.</span>
+        </label>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isDetails }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="02 Your details" style="display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div style="font-size:14px;font-weight:600;color:var(--muted)">The policy is issued in your name. Policy documents are sent to your email.</div><sc-if value="{{ showHints }}" hint-placeholder-val="{{ false }}"><button onClick="{{ fillDemo }}" style="border:1px dashed var(--line);background:var(--card);border-radius:999px;padding:6px 12px;font-weight:800;font-size:12.5px;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:5px"><iconify-icon icon="tabler:wand" width="14"></iconify-icon>Fill demo data</button></sc-if></div>
+
+        <div style="background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:14px">
+          <h2 style="margin:0;font-size:17px;font-weight:800;display:flex;align-items:center;gap:8px"><iconify-icon icon="tabler:user" width="20" style="color:var(--brand)"></iconify-icon>Proposer</h2>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+            <div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:13px;font-weight:700;color:var(--muted)">First name</label><input value="{{ F.first.v }}" onChange="{{ F.first.set }}" placeholder="Rahul" autocomplete="given-name" style="height:48px;border:1.5px solid {{ F.first.bd }};border-radius:12px;padding:0 14px;font-size:15px;font-weight:700;color:var(--ink);outline:none;background:var(--card);width:100%"><sc-if value="{{ F.first.err }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;font-weight:700;color:#D92D20">{{ F.first.err }}</span></sc-if></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:13px;font-weight:700;color:var(--muted)">Last name</label><input value="{{ F.last.v }}" onChange="{{ F.last.set }}" placeholder="Sharma" autocomplete="family-name" style="height:48px;border:1.5px solid {{ F.last.bd }};border-radius:12px;padding:0 14px;font-size:15px;font-weight:700;color:var(--ink);outline:none;background:var(--card);width:100%"><sc-if value="{{ F.last.err }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;font-weight:700;color:#D92D20">{{ F.last.err }}</span></sc-if></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:13px;font-weight:700;color:var(--muted)">Date of birth</label><input value="{{ F.dob.v }}" onChange="{{ F.dob.set }}" inputmode="numeric" placeholder="DD / MM / YYYY" style="height:48px;border:1.5px solid {{ F.dob.bd }};border-radius:12px;padding:0 14px;font-size:15px;font-weight:700;color:var(--ink);outline:none;background:var(--card);width:100%"><sc-if value="{{ F.dob.err }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;font-weight:700;color:#D92D20">{{ F.dob.err }}</span></sc-if></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:13px;font-weight:700;color:var(--muted)">Email</label><input value="{{ F.email.v }}" onChange="{{ F.email.set }}" type="email" placeholder="you@example.com" autocomplete="email" style="height:48px;border:1.5px solid {{ F.email.bd }};border-radius:12px;padding:0 14px;font-size:15px;font-weight:700;color:var(--ink);outline:none;background:var(--card);width:100%"><span style="font-size:12.5px;font-weight:700;color:{{ F.email.hintC }}">{{ F.email.hint }}</span></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:13px;font-weight:700;color:var(--muted)">Mobile number</label><div style="height:48px;border:1.5px solid var(--line);border-radius:12px;padding:0 14px;display:flex;align-items:center;gap:8px;background:var(--bg);font-size:15px;font-weight:700"><span style="color:var(--muted)">+91</span>{{ mobile }}<iconify-icon icon="tabler:circle-check-filled" width="18" style="color:var(--ok);margin-left:auto"></iconify-icon></div><span style="font-size:12.5px;font-weight:600;color:var(--muted)">Prefilled from your enquiry.</span></div>
+          </div>
+        </div>
+
+        <div style="background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:14px">
+          <h2 style="margin:0;font-size:17px;font-weight:800;display:flex;align-items:center;gap:8px"><iconify-icon icon="tabler:home" width="20" style="color:var(--brand)"></iconify-icon>Address</h2>
+          <div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:13px;font-weight:700;color:var(--muted)">Address line 1</label><input value="{{ F.line1.v }}" onChange="{{ F.line1.set }}" placeholder="House / flat no., building, street" autocomplete="address-line1" style="height:48px;border:1.5px solid {{ F.line1.bd }};border-radius:12px;padding:0 14px;font-size:15px;font-weight:700;color:var(--ink);outline:none;background:var(--card);width:100%"><sc-if value="{{ F.line1.err }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;font-weight:700;color:#D92D20">{{ F.line1.err }}</span></sc-if></div>
+          <div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:13px;font-weight:700;color:var(--muted)">Address line 2</label><input value="{{ F.line2.v }}" onChange="{{ F.line2.set }}" placeholder="Area, landmark (optional)" autocomplete="address-line2" style="height:48px;border:1.5px solid var(--line);border-radius:12px;padding:0 14px;font-size:15px;font-weight:700;color:var(--ink);outline:none;background:var(--card);width:100%"></div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px">
+            <div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:13px;font-weight:700;color:var(--muted)">Pincode</label><input value="{{ F.pin.v }}" onChange="{{ F.pin.set }}" inputmode="numeric" placeholder="6-digit pincode" style="height:48px;border:1.5px solid {{ F.pin.bd }};border-radius:12px;padding:0 14px;font-size:15px;font-weight:700;color:var(--ink);outline:none;background:var(--card);width:100%"><sc-if value="{{ F.pin.err }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;font-weight:700;color:#D92D20">{{ F.pin.err }}</span></sc-if></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:13px;font-weight:700;color:var(--muted)">City</label><input value="{{ F.city.v }}" onChange="{{ F.city.set }}" placeholder="City" style="height:48px;border:1.5px solid {{ F.city.bd }};border-radius:12px;padding:0 14px;font-size:15px;font-weight:700;color:var(--ink);outline:none;background:{{ cityBg }};width:100%"></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:13px;font-weight:700;color:var(--muted)">State</label><input value="{{ F.state.v }}" onChange="{{ F.state.set }}" placeholder="State" style="height:48px;border:1.5px solid {{ F.state.bd }};border-radius:12px;padding:0 14px;font-size:15px;font-weight:700;color:var(--ink);outline:none;background:{{ cityBg }};width:100%"></div>
+          </div>
+          <div style="font-size:12.5px;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:6px"><iconify-icon icon="tabler:map-pin" width="15"></iconify-icon>{{ pinNote }}</div>
+        </div>
+
+        <sc-for list="{{ petForms }}" as="p" hint-placeholder-count="1">
+          <div style="background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:14px">
+            <h2 style="margin:0;font-size:17px;font-weight:800;display:flex;align-items:center;gap:8px"><iconify-icon icon="{{ p.icon }}" width="20" style="color:var(--brand)"></iconify-icon>{{ p.heading }}</h2>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+              <div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:13px;font-weight:700;color:var(--muted)">Name</label><input value="{{ p.f.name.v }}" onChange="{{ p.f.name.set }}" placeholder="Enter your pet's name" style="height:48px;border:1.5px solid {{ p.f.name.bd }};border-radius:12px;padding:0 14px;font-size:15px;font-weight:700;color:var(--ink);outline:none;background:var(--card);width:100%"><sc-if value="{{ p.f.name.err }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;font-weight:700;color:#D92D20">{{ p.f.name.err }}</span></sc-if></div>
+              <div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:13px;font-weight:700;color:var(--muted)">Date of birth</label><input value="{{ p.f.dob.v }}" onChange="{{ p.f.dob.set }}" inputmode="numeric" placeholder="DD / MM / YYYY" style="height:48px;border:1.5px solid {{ p.f.dob.bd }};border-radius:12px;padding:0 14px;font-size:15px;font-weight:700;color:var(--ink);outline:none;background:var(--card);width:100%"><span style="font-size:12.5px;font-weight:700;color:{{ p.f.dob.hintC }}">{{ p.f.dob.hint }}</span></div>
+              <div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:13px;font-weight:700;color:var(--muted)">Breed / species</label><select value="{{ p.f.breed.v }}" onChange="{{ p.f.breed.set }}" style="height:48px;border:1.5px solid {{ p.f.breed.bd }};border-radius:12px;padding:0 10px;font-size:15px;font-weight:700;color:var(--ink);background:var(--card);width:100%"><sc-for list="{{ p.breeds }}" as="b" hint-placeholder-count="6"><option value="{{ b }}">{{ b }}</option></sc-for></select></div>
+              <div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:13px;font-weight:700;color:var(--muted)">Gender</label><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px"><sc-for list="{{ p.genders }}" as="g" hint-placeholder-count="2"><button onClick="{{ g.onClick }}" style="height:48px;border:1.5px solid {{ g.bd }};background:{{ g.bg }};border-radius:12px;font-weight:800;font-size:14.5px;cursor:pointer;color:var(--ink);display:flex;align-items:center;justify-content:center;gap:6px"><iconify-icon icon="{{ g.icon }}" width="18"></iconify-icon>{{ g.label }}</button></sc-for></div><sc-if value="{{ p.f.gender.err }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;font-weight:700;color:#D92D20">{{ p.f.gender.err }}</span></sc-if></div>
+              <div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:13px;font-weight:700;color:var(--muted)">Identification tag</label><input value="{{ p.f.tag.v }}" onChange="{{ p.f.tag.set }}" placeholder="Enter tag / microchip number" style="height:48px;border:1.5px solid var(--line);border-radius:12px;padding:0 14px;font-size:15px;font-weight:700;color:var(--ink);outline:none;background:var(--card);width:100%"></div>
+              <div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:13px;font-weight:700;color:var(--muted)">Identification description</label><input value="{{ p.f.desc.v }}" onChange="{{ p.f.desc.set }}" placeholder="Describe identifying marks, colour, etc." style="height:48px;border:1.5px solid {{ p.f.desc.bd }};border-radius:12px;padding:0 14px;font-size:15px;font-weight:700;color:var(--ink);outline:none;background:var(--card);width:100%"><sc-if value="{{ p.f.desc.err }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;font-weight:700;color:#D92D20">{{ p.f.desc.err }}</span></sc-if></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:13px;font-weight:700;color:var(--muted)">Does your pet have a pre-existing disease?</label><select value="{{ p.f.ped.v }}" onChange="{{ p.f.ped.set }}" style="height:48px;border:1.5px solid {{ p.f.ped.bd }};border-radius:12px;padding:0 10px;font-size:15px;font-weight:700;color:var(--ink);background:var(--card);width:100%"><option value="">Select pre-existing disease</option><sc-for list="{{ pedOpts }}" as="o" hint-placeholder-count="5"><option value="{{ o.k }}">{{ o.label }}</option></sc-for></select><sc-if value="{{ p.f.ped.err }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;font-weight:700;color:#D92D20">{{ p.f.ped.err }}</span></sc-if></div>
+            <sc-if value="{{ p.hasPed }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:10px;background:var(--bg);border-radius:14px;padding:14px">
+                <div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:13px;font-weight:700;color:var(--muted)">Latest report value ({{ p.unit }})</label><div style="display:flex;align-items:center;height:48px;border:1.5px solid {{ p.f.pedValue.bd }};border-radius:12px;padding:0 14px;background:var(--card)"><input value="{{ p.f.pedValue.v }}" onChange="{{ p.f.pedValue.set }}" inputmode="decimal" placeholder="Enter latest report value" style="border:none;outline:none;flex:1;min-width:0;font-size:15px;font-weight:700;color:var(--ink);background:transparent"><span style="font-size:13px;font-weight:800;color:var(--muted)">{{ p.unit }}</span></div><sc-if value="{{ p.f.pedValue.err }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;font-weight:700;color:#D92D20">{{ p.f.pedValue.err }}</span></sc-if></div>
+                <sc-if value="{{ p.pedMsg }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:8px;align-items:flex-start;font-size:13px;font-weight:700;color:#6E4A16;background:#FFF5E6;border-radius:10px;padding:10px 12px;line-height:1.45"><iconify-icon icon="tabler:info-circle" width="16" style="margin-top:1px"></iconify-icon>{{ p.pedMsg }}</div></sc-if>
+                <sc-if value="{{ p.nudge }}" hint-placeholder-val="{{ false }}"><button onClick="{{ toggleWaiver }}" style="text-align:left;border:1.5px dashed var(--brand);background:var(--tint);border-radius:12px;padding:12px;display:flex;gap:10px;align-items:center;cursor:pointer;color:var(--ink)"><iconify-icon icon="tabler:hourglass-low" width="20" style="color:var(--brand)"></iconify-icon><span style="flex:1;font-size:13.5px;font-weight:700;line-height:1.4">Cover this condition after 12 months instead of 36</span><span style="font-weight:800;font-size:13.5px;color:var(--brand-ink);white-space:nowrap">Add +{{ waiverPrice }}</span></button></sc-if>
+                <sc-if value="{{ p.waiverOn }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:8px;align-items:center;font-size:13px;font-weight:800;color:var(--ok)"><iconify-icon icon="tabler:circle-check-filled" width="17"></iconify-icon>12-month existing-condition cover added</div></sc-if>
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+
+        <div style="background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:14px">
+          <h2 style="margin:0;font-size:17px;font-weight:800;display:flex;align-items:center;gap:8px"><iconify-icon icon="tabler:users" width="20" style="color:var(--brand)"></iconify-icon>Nominee</h2>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+            <div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:13px;font-weight:700;color:var(--muted)">Nominee name</label><input value="{{ F.nomName.v }}" onChange="{{ F.nomName.set }}" placeholder="Full name of nominee" style="height:48px;border:1.5px solid {{ F.nomName.bd }};border-radius:12px;padding:0 14px;font-size:15px;font-weight:700;color:var(--ink);outline:none;background:var(--card);width:100%"><sc-if value="{{ F.nomName.err }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;font-weight:700;color:#D92D20">{{ F.nomName.err }}</span></sc-if></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:13px;font-weight:700;color:var(--muted)">Relationship with nominee</label><select value="{{ F.nomRel.v }}" onChange="{{ F.nomRel.set }}" style="height:48px;border:1.5px solid {{ F.nomRel.bd }};border-radius:12px;padding:0 10px;font-size:15px;font-weight:700;color:var(--ink);background:var(--card);width:100%"><option value="">Select relationship</option><sc-for list="{{ relations }}" as="r" hint-placeholder-count="6"><option value="{{ r }}">{{ r }}</option></sc-for></select><sc-if value="{{ F.nomRel.err }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;font-weight:700;color:#D92D20">{{ F.nomRel.err }}</span></sc-if></div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isKyc }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="03 KYC" style="display:flex;flex-direction:column;gap:14px">
+        <sc-if value="{{ kycOk }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;gap:14px;align-items:center;background:var(--ok-tint);border-radius:18px;padding:16px"><div style="width:48px;height:48px;border-radius:50%;background:var(--ok);display:flex;align-items:center;justify-content:center;flex:none"><iconify-icon icon="tabler:check" width="26" style="color:#fff"></iconify-icon></div><div><div style="font-size:16.5px;font-weight:800">KYC verified successfully</div><div style="font-size:13.5px;font-weight:600;color:var(--muted);line-height:1.45">{{ kycOkMsg }}</div></div></div>
+        </sc-if>
+        <div style="background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:14px">
+          <div><h2 style="margin:0 0 4px;font-size:17px;font-weight:800">Aadhar verification</h2><div style="font-size:14px;font-weight:600;color:var(--muted)">Verify your identity to continue buying your pet insurance.</div></div>
+          <div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:13px;font-weight:700;color:var(--muted)">Enter your Aadhar Number</label><input value="{{ F.aadhaar.v }}" onChange="{{ F.aadhaar.set }}" inputmode="numeric" placeholder="0000 0000 0000" disabled="{{ kycLocked }}" style="height:52px;border:1.5px solid {{ F.aadhaar.bd }};border-radius:12px;padding:0 14px;font-size:18px;font-weight:800;letter-spacing:.08em;color:var(--ink);outline:none;background:{{ aadhaarBg }};width:100%"><span style="font-size:12.5px;font-weight:700;color:{{ F.aadhaar.hintC }}">{{ F.aadhaar.hint }}</span></div>
+          <label style="display:flex;gap:12px;align-items:flex-start;cursor:pointer"><input type="checkbox" checked="{{ kycConsent }}" onChange="{{ toggleKycConsent }}" disabled="{{ kycLocked }}" style="width:20px;height:20px;accent-color:var(--brand);margin-top:1px;flex:none"><span style="font-size:13.5px;line-height:1.5;font-weight:600">I consent to receive an OTP on the mobile number linked to my Aadhar for verification to buy Pet Insurance.</span></label>
+          <sc-if value="{{ kycCanSend }}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{ kycSend }}" disabled="{{ kycSendDisabled }}" style="height:50px;border:none;border-radius:12px;background:var(--brand);color:#fff;font-weight:800;font-size:15.5px;cursor:pointer;opacity:{{ kycSendOp }}">{{ kycSendLabel }}</button>
+          </sc-if>
+          <sc-if value="{{ kycOtpVisible }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:14px">
+              <div style="font-size:13px;font-weight:700;color:var(--ok);display:flex;align-items:center;gap:6px"><iconify-icon icon="tabler:message-check" width="16"></iconify-icon>OTP sent to the mobile number linked to your Aadhar</div>
+              <label style="font-size:13px;font-weight:700;color:var(--muted)">Enter OTP</label>
+              <div style="display:flex;gap:8px"><input value="{{ F.kycOtp.v }}" onChange="{{ F.kycOtp.set }}" inputmode="numeric" placeholder="6-digit OTP" disabled="{{ kycLocked }}" style="flex:1;min-width:0;height:50px;border:1.5px solid {{ F.kycOtp.bd }};border-radius:12px;padding:0 14px;font-size:18px;font-weight:800;letter-spacing:.3em;color:var(--ink);outline:none;background:var(--card)"><button onClick="{{ kycVerify }}" disabled="{{ kycVerifyDisabled }}" style="height:50px;border:none;border-radius:12px;background:var(--ink);color:#fff;font-weight:800;font-size:14.5px;padding:0 18px;cursor:pointer;opacity:{{ kycVerifyOp }};white-space:nowrap">{{ kycVerifyLabel }}</button></div>
+              <sc-if value="{{ F.kycOtp.err }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;font-weight:700;color:#D92D20">{{ F.kycOtp.err }}</span></sc-if>
+            </div>
+          </sc-if>
+          <sc-if value="{{ kycUploadVisible }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:14px">
+              <label style="font-size:13px;font-weight:700;color:var(--muted)">Upload Aadhar Card</label>
+              <sc-if value="{{ kycNoFile }}" hint-placeholder-val="{{ true }}">
+                <label style="border:2px dashed var(--brand);background:var(--tint);border-radius:14px;padding:22px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;text-align:center"><iconify-icon icon="tabler:cloud-upload" width="30" style="color:var(--brand)"></iconify-icon><span style="font-weight:800;font-size:15px">Tap to upload Aadhar card</span><span style="font-size:12.5px;font-weight:600;color:var(--muted)">JPG, PNG or PDF · Max 5 MB</span><input type="file" accept="image/*,.pdf" onChange="{{ kycFile }}" style="display:none"></label>
+              </sc-if>
+              <sc-if value="{{ kycHasFile }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;align-items:center;gap:12px;border:1.5px solid var(--line);border-radius:14px;padding:12px"><div style="width:40px;height:40px;border-radius:10px;background:var(--bg);display:flex;align-items:center;justify-content:center"><iconify-icon icon="tabler:file-text" width="22" style="color:var(--brand)"></iconify-icon></div><div style="flex:1;min-width:0"><div style="font-weight:800;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ kycFileName }}</div><div style="font-size:12.5px;font-weight:700;color:{{ kycFileC }};display:flex;align-items:center;gap:4px">{{ kycFileStatus }}</div></div><sc-if value="{{ kycUploading }}" hint-placeholder-val="{{ false }}"><span style="width:20px;height:20px;border-radius:50%;border:2.5px solid var(--tint2);border-top-color:var(--brand);animation:spin .8s linear infinite"></span></sc-if></div>
+              </sc-if>
+            </div>
+          </sc-if>
+          <sc-if value="{{ showHints }}" hint-placeholder-val="{{ false }}"><div style="font-size:12.5px;font-weight:700;color:var(--muted);display:flex;gap:6px;align-items:center"><iconify-icon icon="tabler:flask" width="15"></iconify-icon>Demo: OTP 123456 · an Aadhar ending in 0000 fails, so you can test the upload fallback</div></sc-if>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;font-size:12.5px;font-weight:600;color:var(--muted)"><iconify-icon icon="tabler:lock" width="16"></iconify-icon>Your Aadhar number is used only for KYC with the insurer and is never stored in full.</div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isPay }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="04 Review & pay" style="display:flex;flex-direction:column;gap:14px">
+        <div style="background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:12px">
+          <h2 style="margin:0;font-size:17px;font-weight:800">Review</h2>
+          <sc-for list="{{ review }}" as="r" hint-placeholder-count="5">
+            <div style="display:flex;gap:12px;align-items:flex-start;padding-bottom:10px;border-bottom:1px solid var(--line)"><iconify-icon icon="{{ r.icon }}" width="19" style="color:var(--brand);margin-top:2px"></iconify-icon><div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:700;color:var(--muted)">{{ r.k }}</div><div style="font-size:14.5px;font-weight:800;line-height:1.4">{{ r.v }}</div></div><button onClick="{{ r.edit }}" style="border:none;background:none;color:var(--brand-ink);font-weight:800;font-size:13px;cursor:pointer">Edit</button></div>
+          </sc-for>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:10px">
+          <h2 style="margin:0;font-size:17px;font-weight:800">Pay with</h2>
+          <sc-for list="{{ payMethods }}" as="m" hint-placeholder-count="3">
+            <button onClick="{{ m.onClick }}" style="display:flex;align-items:center;gap:12px;border:1.5px solid {{ m.bd }};background:{{ m.bg }};border-radius:14px;padding:12px 14px;cursor:pointer;text-align:left;color:var(--ink);min-height:56px"><iconify-icon icon="{{ m.icon }}" width="24" style="color:var(--brand)"></iconify-icon><span style="flex:1"><span style="display:block;font-weight:800;font-size:15px">{{ m.label }}</span><span style="display:block;font-size:12.5px;font-weight:600;color:var(--muted)">{{ m.sub }}</span></span><span style="width:20px;height:20px;border-radius:50%;border:2px solid {{ m.rb }};background:{{ m.rf }};box-shadow:inset 0 0 0 3px #fff"></span></button>
+          </sc-for>
+        </div>
+        <div style="background:var(--ink);color:#fff;border-radius:18px;padding:18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+          <sc-for list="{{ trust }}" as="t" hint-placeholder-count="4">
+            <div style="display:flex;gap:10px;align-items:flex-start"><iconify-icon icon="{{ t.icon }}" width="20" style="color:var(--tint2);margin-top:1px"></iconify-icon><div style="font-size:13px;line-height:1.45"><div style="font-weight:800">{{ t.t }}</div><div style="opacity:.8;font-weight:600">{{ t.d }}</div></div></div>
+          </sc-for>
+        </div>
+        <sc-if value="{{ showHints }}" hint-placeholder-val="{{ false }}"><label style="display:flex;gap:10px;align-items:center;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer"><input type="checkbox" checked="{{ simFail }}" onChange="{{ toggleSimFail }}" style="width:18px;height:18px;accent-color:var(--brand)">Demo: simulate a failed payment</label></sc-if>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isSuccess }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="05 Payment success" style="background:var(--card);border:1px solid var(--line);border-radius:22px;padding:24px 20px;display:flex;flex-direction:column;gap:18px">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center"><div style="width:68px;height:68px;border-radius:50%;background:var(--ok-tint);display:flex;align-items:center;justify-content:center"><iconify-icon icon="tabler:circle-check-filled" width="44" style="color:var(--ok)"></iconify-icon></div><h1 style="margin:0;font-size:24px;font-weight:800">Payment successful</h1><div style="font-size:14.5px;font-weight:600;color:var(--muted);max-width:380px;line-height:1.5">Your pet's policy has been issued. A copy has been sent to {{ emailOrYou }}.</div></div>
+        <div style="background:var(--bg);border-radius:14px;padding:14px;display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700;color:var(--muted)">Amount paid</span><span style="font-size:22px;font-weight:800">{{ paidLabel }}</span></div>
+        <div style="display:flex;flex-direction:column;gap:0"><div style="font-size:15px;font-weight:800;margin-bottom:6px">Policy details</div>
+          <sc-for list="{{ policyRows }}" as="r" hint-placeholder-count="5"><div style="display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px"><span style="color:var(--muted);font-weight:700">{{ r.k }}</span><span style="font-weight:800;text-align:right">{{ r.v }}</span></div></sc-for>
+        </div>
+        <button onClick="{{ downloadPolicy }}" style="height:52px;border:none;border-radius:14px;background:var(--brand);color:#fff;font-weight:800;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px"><iconify-icon icon="tabler:download" width="20"></iconify-icon>Download policy PDF</button>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <a href="{{ waShare }}" target="_blank" style="height:48px;border:1.5px solid var(--line);border-radius:12px;display:flex;align-items:center;justify-content:center;gap:6px;font-weight:800;font-size:14px;color:var(--ink)"><iconify-icon icon="tabler:brand-whatsapp" width="19" style="color:#25D366"></iconify-icon>Get on WhatsApp</a>
+          <a href="{{ cashlessHref }}" style="height:48px;border:1.5px solid var(--line);border-radius:12px;display:flex;align-items:center;justify-content:center;gap:6px;font-weight:800;font-size:14px;color:var(--ink)"><iconify-icon icon="tabler:map-pin-heart" width="19" style="color:var(--brand)"></iconify-icon>Cashless vets</a>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isFailed }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="06 Payment failed" style="background:var(--card);border:1px solid var(--line);border-radius:22px;padding:24px 20px;display:flex;flex-direction:column;gap:18px">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center"><div style="width:68px;height:68px;border-radius:50%;background:#FEECEB;display:flex;align-items:center;justify-content:center"><iconify-icon icon="tabler:circle-x-filled" width="44" style="color:#D92D20"></iconify-icon></div><h1 style="margin:0;font-size:24px;font-weight:800">Payment failed</h1><div style="font-size:14.5px;font-weight:600;color:var(--muted);max-width:400px;line-height:1.5">We could not complete your payment. If any amount was debited, it is refunded automatically within 5–7 working days.</div></div>
+        <div style="display:flex;flex-direction:column"><div style="font-size:15px;font-weight:800;margin-bottom:6px">Transaction</div>
+          <sc-for list="{{ failRows }}" as="r" hint-placeholder-count="3"><div style="display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px"><span style="color:var(--muted);font-weight:700">{{ r.k }}</span><span style="font-weight:800;color:{{ r.c }}">{{ r.v }}</span></div></sc-for>
+        </div>
+        <button onClick="{{ retryPay }}" style="height:52px;border:none;border-radius:14px;background:var(--brand);color:#fff;font-weight:800;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px"><iconify-icon icon="tabler:refresh" width="20"></iconify-icon>Retry payment</button>
+        <div style="text-align:center;font-size:13px;font-weight:700;color:var(--muted)">Need help? <a href="{{ supportTel }}">Call {{ supportPhone }}</a></div>
+      </div>
+    </sc-if>
+  </main>
+
+  <sc-if value="{{ showAside }}" hint-placeholder-val="{{ false }}">
+    <aside style="flex:1 1 300px;max-width:400px;position:sticky;top:80px;display:flex;flex-direction:column;gap:12px">
+      <div style="background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px"><div style="width:40px;height:40px;border-radius:50%;background:var(--tint);display:flex;align-items:center;justify-content:center"><iconify-icon icon="{{ petIcon }}" width="22" style="color:var(--brand)"></iconify-icon></div><div><div style="font-weight:800;font-size:15px">{{ productName }}</div><div style="font-size:12.5px;font-weight:600;color:var(--muted)">{{ petSummary }} · ₹5L/yr · 3 years</div></div></div>
+        <div style="font-size:14px;font-weight:800;margin-top:4px">Premium breakup</div>
+        <sc-for list="{{ lines }}" as="l" hint-placeholder-count="5"><div style="display:flex;justify-content:space-between;gap:10px;font-size:13.5px"><span style="color:var(--muted);font-weight:600">{{ l.label }}</span><span style="font-weight:800;color:{{ l.c }};white-space:nowrap">{{ l.v }}</span></div></sc-for>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;border-top:1.5px dashed var(--line);padding-top:10px;margin-top:2px"><span style="font-weight:800">Total Premium Payable</span><span style="font-size:22px;font-weight:800">{{ totalLabel }}</span></div>
+        <div style="font-size:12px;font-weight:600;color:var(--muted)">≈ {{ perYearLabel }}/year · price locked for 3 years</div>
+        <sc-if value="{{ isRefer }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:8px;font-size:12.5px;font-weight:700;color:#6E4A16;background:#FFF5E6;border-radius:10px;padding:10px;line-height:1.45"><iconify-icon icon="tabler:stethoscope" width="16"></iconify-icon>The insurer will review the health values before issuing. If declined, you get a full refund.</div></sc-if>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;font-size:12px;font-weight:600;color:var(--muted);padding:0 4px;line-height:1.45"><iconify-icon icon="tabler:shield-check" width="18" style="color:var(--ok)"></iconify-icon>Underwritten by {{ insurerName }} · IRDAI Reg. No. 113 · UIN {{ uin }}</div>
+    </aside>
+  </sc-if>
+  </div>
+</div>
+
+<sc-if value="{{ showBar }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;left:0;right:0;bottom:0;z-index:25;background:var(--card);border-top:1px solid var(--line);box-shadow:0 -10px 30px -20px rgba(0,0,0,.25)">
+    <div style="max-width:1080px;margin:0 auto;padding:12px 16px calc(12px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:10px">
+      <button onClick="{{ openBreakup }}" style="flex:1;min-width:0;border:none;background:none;padding:0;text-align:left;cursor:pointer;color:var(--ink)"><div style="font-size:12px;font-weight:700;color:var(--muted);display:flex;align-items:center;gap:3px">Total · 3 years<iconify-icon icon="tabler:chevron-up" width="14"></iconify-icon></div><div style="font-size:21px;font-weight:800;letter-spacing:-.01em">{{ totalLabel }}</div></button>
+      <sc-if value="{{ canBack }}" hint-placeholder-val="{{ false }}"><button onClick="{{ back }}" style="height:52px;border:1.5px solid var(--line);background:var(--card);border-radius:14px;padding:0 18px;font-weight:800;font-size:15px;cursor:pointer;color:var(--ink)">Back</button></sc-if>
+      <button onClick="{{ next }}" disabled="{{ nextBusy }}" style="height:52px;border:none;background:var(--brand);color:#fff;border-radius:14px;padding:0 22px;font-weight:800;font-size:16px;cursor:pointer;display:flex;align-items:center;gap:8px;opacity:{{ nextOp }};box-shadow:0 10px 22px -12px var(--brand)">{{ nextLabel }}<iconify-icon icon="tabler:arrow-right" width="19"></iconify-icon></button>
+    </div>
+  </div>
+</sc-if>
+</sc-if>
+
+<sc-if value="{{ sheetOpen }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ closeSheet }}" style="position:fixed;inset:0;z-index:50;background:rgba(20,16,18,.5)"></div>
+  <div role="dialog" style="position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:min(560px,100%);z-index:51;background:var(--card);border-radius:24px 24px 0 0;padding:10px 20px calc(24px + env(safe-area-inset-bottom));max-height:86vh;overflow:auto;display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;justify-content:center"><span style="width:40px;height:5px;border-radius:3px;background:var(--line)"></span></div>
+
+    <sc-if value="{{ sBreakup }}" hint-placeholder-val="{{ false }}">
+      <div style="font-size:19px;font-weight:800">Premium breakup</div>
+      <sc-for list="{{ lines }}" as="l" hint-placeholder-count="5"><div style="display:flex;justify-content:space-between;gap:10px;font-size:14.5px"><span style="color:var(--muted);font-weight:600">{{ l.label }}</span><span style="font-weight:800;color:{{ l.c }}">{{ l.v }}</span></div></sc-for>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;border-top:1.5px dashed var(--line);padding-top:12px"><span style="font-weight:800">Total Premium Payable</span><span style="font-size:24px;font-weight:800">{{ totalLabel }}</span></div>
+      <button onClick="{{ closeSheet }}" style="height:50px;border:none;border-radius:14px;background:var(--ink);color:#fff;font-weight:800;font-size:15.5px;cursor:pointer">Done</button>
+    </sc-if>
+
+    <sc-if value="{{ sSave }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;gap:12px;align-items:center"><div style="width:46px;height:46px;border-radius:14px;background:var(--tint);display:flex;align-items:center;justify-content:center"><iconify-icon icon="tabler:bookmark" width="24" style="color:var(--brand)"></iconify-icon></div><div><div style="font-size:19px;font-weight:800">Your quote is saved</div><div style="font-size:13.5px;font-weight:600;color:var(--muted)">Pick up on any device. Your price is held for 30 days.</div></div></div>
+      <div style="display:flex;align-items:center;gap:8px;border:1.5px solid var(--line);border-radius:12px;padding:0 6px 0 12px;height:50px"><span style="flex:1;min-width:0;font-size:13.5px;font-weight:700;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ resumeUrl }}</span><button onClick="{{ copyLink }}" style="height:38px;border:none;border-radius:9px;background:var(--bg);padding:0 12px;font-weight:800;font-size:13.5px;cursor:pointer;color:var(--ink)">{{ copyLabel }}</button></div>
+      <a href="{{ waResume }}" target="_blank" style="height:52px;border-radius:14px;background:#25D366;color:#fff;font-weight:800;font-size:15.5px;display:flex;align-items:center;justify-content:center;gap:8px" style-hover="color:#fff"><iconify-icon icon="tabler:brand-whatsapp" width="22"></iconify-icon>Send link to +91 {{ mobile }}</a>
+      <button onClick="{{ closeSheet }}" style="height:48px;border:1.5px solid var(--line);border-radius:14px;background:var(--card);font-weight:800;font-size:15px;cursor:pointer;color:var(--ink)">Keep going</button>
+    </sc-if>
+
+    <sc-if value="{{ sKycFail }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;padding:6px 0"><div style="width:60px;height:60px;border-radius:50%;background:#FEECEB;display:flex;align-items:center;justify-content:center"><iconify-icon icon="tabler:alert-triangle" width="30" style="color:#D92D20"></iconify-icon></div><div style="font-size:20px;font-weight:800">KYC verification failed</div><div style="font-size:14.5px;font-weight:600;color:var(--muted);line-height:1.5;max-width:380px">We could not verify your Aadhar with OTP. Please upload a copy of your Aadhar card to continue.</div></div>
+      <button onClick="{{ closeSheet }}" style="height:52px;border:none;border-radius:14px;background:var(--brand);color:#fff;font-weight:800;font-size:16px;cursor:pointer">Upload Aadhar card</button>
+    </sc-if>
+
+    <sc-if value="{{ sGateway }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">Mock payment gateway · test mode</div><iconify-icon icon="tabler:lock" width="18" style="color:var(--ok)"></iconify-icon></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0"><div style="font-size:14px;font-weight:700;color:var(--muted)">Paying {{ partnerName }} · {{ insurerShort }}</div><div style="font-size:34px;font-weight:800;letter-spacing:-.02em">{{ totalLabel }}</div><div style="font-size:13px;font-weight:700;color:var(--muted)">via {{ payMethodLabel }}</div></div>
+      <sc-if value="{{ payBusy }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px 0;font-weight:700;color:var(--muted)"><span style="width:34px;height:34px;border-radius:50%;border:3px solid var(--tint2);border-top-color:var(--brand);animation:spin .8s linear infinite"></span>Processing payment. Don't close this page.</div></sc-if>
+      <sc-if value="{{ payIdle }}" hint-placeholder-val="{{ true }}">
+        <button onClick="{{ confirmPay }}" style="height:54px;border:none;border-radius:14px;background:var(--brand);color:#fff;font-weight:800;font-size:16.5px;cursor:pointer">Pay {{ totalLabel }}</button>
+        <button onClick="{{ closeSheet }}" style="height:46px;border:none;background:none;font-weight:800;font-size:14.5px;cursor:pointer;color:var(--muted)">Cancel</button>
+      </sc-if>
+    </sc-if>
+  </div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;partner&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;pawsindia&quot;,&quot;cleartrip&quot;],&quot;default&quot;:&quot;pawsindia&quot;,&quot;tsType&quot;:&quot;'pawsindia'|'cleartrip'&quot;,&quot;section&quot;:&quot;White-label&quot;},&quot;ssoLogin&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;startStep&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;verify&quot;,&quot;cover&quot;,&quot;details&quot;,&quot;kyc&quot;,&quot;pay&quot;,&quot;success&quot;,&quot;failed&quot;],&quot;default&quot;:&quot;verify&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;showDemoHints&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Demo&quot;}}">
+const STEPS=['verify','cover','details','kyc','pay','success','failed'];
+const META={cover:['Tailored Plan for you','Coverages',1,'About 3 min left'],details:['About you and your furry friend!','Your details',2,'About 2 min left'],kyc:['KYC Verification','KYC verification',3,'About 1 min left'],pay:['Review & pay','Payment',3,'Less than a minute']};
+const AGES=[0.25,0.5,0.75,...Array.from({length:20},(_,i)=>i+1)];
+const ageText=a=>a<1?`${Math.round(a*12)} months`:`${a} yr${a>1?'s':''}`;
+const nearestAgeIdx=a=>{let b=0;AGES.forEach((x,i)=>{if(Math.abs(x-a)<Math.abs(AGES[b]-a))b=i;});return b;};
+const digits=(v,n)=>String(v||'').replace(/\D/g,'').slice(0,n);
+const maskDob=v=>{const d=digits(v,8);return d.length>4?`${d.slice(0,2)}/${d.slice(2,4)}/${d.slice(4)}`:d.length>2?`${d.slice(0,2)}/${d.slice(2)}`:d;};
+const maskAadhaar=v=>digits(v,12).replace(/(\d{4})(?=\d)/g,'$1 ');
+const getIn=(o,p)=>p.split('.').reduce((a,k)=>a==null?a:a[k],o);
+const setIn=(o,p,v)=>{const [k,...r]=p.split('.');const c=Array.isArray(o)?[...o]:{...(o||{})};c[k]=r.length?setIn(c[k],r.join('.'),v):v;return c;};
+const newPet=(type='dog',breed='Labrador Retriever',ageYears=3)=>({type,breed,ageYears,name:'',dob:'',gender:'',tag:'',desc:'',ped:'',pedValue:''});
+const DEMO_LEAD={name:'Rahul Sharma',mobile:'9876543210',ownerAge:32,pincode:'400050',petType:'dog',breed:'Labrador Retriever',petAge:3};
+const BENEFITS=[['tabler:building-hospital','Hospitalisation','60 days before, 90 after'],['tabler:clock-hour-4','Day care procedures','Under 24 hours'],['tabler:ambulance','Road ambulance','Emergency transport'],['tabler:home-2','Emergency pet boarding','Up to 7 days'],['tabler:medicine-syrup','Consumables Plus','Included'],['tabler:shield-half-filled','Third-party liability','Up to ₹5 lakh, included']];
+
+class Component extends DCLogic {
+  state={ready:false,step:'verify',form:{},pets:[newPet()],pedWaiver:false,coupon:'',confirm:false,errors:{},otp:{},kyc:{},pay:{method:'upi'},editPet:-1,sheet:null,savedAt:0,resumed:false,simFail:false,copied:false};
+  componentDidMount(){
+    const wait=()=>window.PetAPI&&window.PetEngine&&window.PET_CONFIG?this.init():setTimeout(wait,40);wait();
+    this._tick=setInterval(()=>{if((this.state.otp.resendAt||0)>Date.now())this.forceUpdate();},1000);
+  }
+  componentWillUnmount(){clearInterval(this._tick);clearTimeout(this._save);}
+  componentDidUpdate(pp,ps){
+    if(pp.partner!==this.props.partner&&this.props.partner&&window.PET_CONFIG){PET_CONFIG.setPartner(this.props.partner);this.forceUpdate();}
+    if(pp.startStep!==this.props.startStep&&this.props.startStep&&this.state.ready)this.jump(this.props.startStep);
+    if(this.state.ready&&this.state.quoteId&&ps!==this.state&&ps.savedAt===this.state.savedAt&&!['success','failed'].includes(this.state.step)){clearTimeout(this._save);this._save=setTimeout(()=>this.persist(),700);}
+    if(ps.step!==this.state.step)window.scrollTo({top:0,behavior:'smooth'});
+  }
+  async init(){
+    if(this.props.partner)PET_CONFIG.setPartner(this.props.partner);
+    const qs=new URLSearchParams(location.search);let rec=null;
+    try{if(qs.get('resume'))rec=await PetAPI.getQuote({resumeToken:qs.get('resume')});else if(qs.get('q'))rec=await PetAPI.getQuote({id:qs.get('q')});}catch(e){}
+    if(!rec){const r=await PetAPI.createLead(DEMO_LEAD);rec=await PetAPI.getQuote({id:r.id});}
+    const L=rec.lead||DEMO_LEAD;const sso=(this.props.ssoLogin??false)||qs.get('sso')==='1';
+    const [first,...rest]=(L.name||'').split(' ');
+    const s=rec.app||{form:{first,last:rest.join(' '),mobile:L.mobile,pin:L.pincode,city:L.city||'',state:'',email:sso?'rahul.sharma@example.com':''},pets:[newPet(L.petType,L.breed,L.petAge)],step:sso?'cover':'verify',verified:sso};
+    const pc=PetEngine.pincode(s.form.pin);if(!s.form.state&&pc&&pc.known){s.form.city=pc.city;s.form.state=pc.state;}
+    this.setState({ready:true,quoteId:rec.id,resumeToken:rec.resumeToken,lead:L,sso,...s,kyc:{},resumed:!!qs.get('resume')&&!!rec.app},()=>{const st=this.props.startStep;if(st&&st!=='verify')this.jump(st);});
+    PetAPI.track('checkout_view',{step:s.step,resumed:!!qs.get('resume')});
+  }
+  persist(){const s=this.state;PetAPI.saveQuote(s.quoteId,{app:{form:{...s.form,aadhaar:'',kycOtp:'',otp:''},pets:s.pets,pedWaiver:s.pedWaiver,coupon:s.coupon,confirm:s.confirm,step:s.step==='pay'?'kyc':s.step,verified:s.verified},step:s.step}).then(()=>this.setState({savedAt:Date.now()}));}
+  jump(step){if(!STEPS.includes(step))return;const q=this.quote();const x={step,verified:true,errors:{},sheet:null};
+    if(['pay','success','failed'].includes(step))x.kyc={status:'verified',method:'aadhaar_otp',consent:true,reqId:'demo'};
+    if(step==='success')x.result={status:'paid',policy:{number:PetEngine.policyNumber(Date.now()),period:PetEngine.policyPeriod(),amount:q.total}};
+    if(step==='failed')x.result={status:'failed',reference:'11-8466-0000000661-00',amount:q.total};
+    if(step!=='verify'&&step!=='cover')this.fillDemo();this.setState(x);}
+  quote(){return PetEngine.quote(this.quoteInput());}
+  quoteInput(){const s=this.state;const age=PetEngine.ageFromDob(s.form.dob);return ({ownerAge:age||(s.lead&&s.lead.ownerAge)||32,pincode:s.form.pin,pets:s.pets.map(p=>({type:p.type,breed:p.breed,ageYears:PetEngine.ageFromDob(p.dob)??p.ageYears,ped:p.ped,pedValue:p.pedValue})),pedWaiver:s.pedWaiver,coupon:s.coupon});}
+  upd(path,v){this.setState(s=>{const n={errors:{...s.errors,[path]:''}};if(path.startsWith('pets.'))n.pets=setIn(s.pets,path.slice(5),v);else n.form=setIn(s.form,path,v);return n;});}
+  fld(path,mask,extra){const s=this.state;const v=path.startsWith('pets.')?getIn(s.pets,path.slice(5)):getIn(s.form,path);const err=s.errors[path]||'';return {v:v??'',err,bd:err?'#D92D20':'var(--line)',set:e=>{const val=mask?mask(e.target.value):e.target.value;this.upd(path,val);if(extra)extra(val);}};}
+  fillDemo(){this.setState(s=>{const f={...s.form,first:s.form.first||'Rahul',last:s.form.last||'Sharma',dob:s.form.dob||'14/08/1993',email:s.form.email||'rahul.sharma@example.com',mobile:s.form.mobile||'9876543210',line1:s.form.line1||'B-1204, Sea Breeze Towers, Turner Road',line2:s.form.line2||'Bandra West',pin:s.form.pin||'400050',city:s.form.city||'Mumbai',state:s.form.state||'Maharashtra',nomName:s.form.nomName||'Priya Sharma',nomRel:s.form.nomRel||'Spouse'};const pets=s.pets.map((p,i)=>({...p,name:p.name||(i?'Mishti':'Bruno'),dob:p.dob||(i?'02/03/2023':'10/06/2023'),gender:p.gender||(i?'Female':'Male'),desc:p.desc||(i?'Grey tabby, white paws':'Golden coat, white patch on chest'),ped:p.ped||'none'}));return {form:f,pets,confirm:true,verified:true,errors:{}};});}
+  validate(step){const s=this.state,V=PetEngine.V,e={};const f=s.form;
+    if(step==='cover'&&!s.confirm)e.confirm='Please confirm to continue';
+    if(step==='details'){[['first',V.name],['last',V.name],['dob',V.ownerDob],['email',V.email],['line1',V.required],['pin',V.pincode],['city',V.required],['state',V.required],['nomName',V.name],['nomRel',V.required]].forEach(([k,fn])=>{const m=fn(f[k]);if(m)e[k]=m;});
+      s.pets.forEach((p,i)=>{[['name',V.required],['dob',V.petDob],['gender',V.required],['desc',V.required],['ped',v=>v?'':'Select an option']].forEach(([k,fn])=>{const m=fn(p[k]);if(m)e[`pets.${i}.${k}`]=m;});if(p.ped&&p.ped!=='none'&&!(parseFloat(p.pedValue)>0))e[`pets.${i}.pedValue`]='Enter the latest report value';});}
+    this.setState({errors:e});return Object.keys(e).length===0;}
+  async next(){const s=this.state;
+    if(s.step==='verify'){if(s.sso||s.verified)return this.go('cover');if(!s.otp.reqId)return this.sendOtp();return this.verifyOtp();}
+    if(s.step==='cover'){if(this.validate('cover'))this.go('details');return;}
+    if(s.step==='details'){if(this.validate('details'))this.go('kyc');else setTimeout(()=>{const el=document.querySelector('main [style*="rgb(217, 45, 32)"], main [style*="#D92D20"]');if(el)window.scrollTo({top:el.getBoundingClientRect().top+window.scrollY-160,behavior:'smooth'});},60);return;}
+    if(s.step==='kyc'){if(s.kyc.status==='verified')this.go('pay');return;}
+    if(s.step==='pay'){const q=this.quote();try{const o=await PetAPI.createPayment(s.quoteId,q.total,this.quoteInput());this.setState({order:o,sheet:'gateway',pay:{...this.state.pay,busy:false}});}catch(e){alert(e.message||'Could not start payment');return;}PetAPI.track('payment_open',{amount:q.total});}
+  }
+  go(step){PetAPI.track('step_complete',{from:this.state.step,to:step});this.setState({step,errors:{}});}
+  back(){const order=['verify','cover','details','kyc','pay'];const i=order.indexOf(this.state.step);if(i>0){const t=order[i-1];this.setState({step:t==='verify'&&this.state.verified?'cover':t});}}
+  async sendOtp(){const m=this.state.form.mobile;const err=PetEngine.V.mobile(m);if(err)return this.setState({errors:{...this.state.errors,mobile:err}});this.setState({otp:{busy:true}});try{const r=await PetAPI.sendOtp(m);this.setState({otp:{reqId:r.requestId,resendAt:Date.now()+r.resendIn*1000,busy:false}});}catch(e){this.setState({otp:{busy:false},errors:{mobile:e.message}});}}
+  async verifyOtp(){const s=this.state;const code=s.form.otp||'';const err=PetEngine.V.otp(code);if(err)return this.setState({errors:{otp:err}});this.setState({otp:{...s.otp,busy:true}});try{await PetAPI.verifyOtp(s.otp.reqId,code);this.setState({verified:true,otp:{...this.state.otp,busy:false}});PetAPI.track('otp_verified');this.go('cover');}catch(e){this.setState({otp:{...this.state.otp,busy:false},errors:{otp:e.message}});}}
+  async kycSend(){const s=this.state;const err=PetEngine.V.aadhaar(s.form.aadhaar);if(err)return this.setState({errors:{aadhaar:err}});this.setState({kyc:{...s.kyc,busy:'send'}});try{const r=await PetAPI.kycSend(s.form.aadhaar);this.setState({kyc:{...this.state.kyc,busy:null,reqId:r.requestId}});}catch(e){this.setState({kyc:{...this.state.kyc,busy:null},errors:{aadhaar:e.message}});}}
+  async kycVerify(){const s=this.state;const err=PetEngine.V.otp(s.form.kycOtp);if(err)return this.setState({errors:{kycOtp:err}});this.setState({kyc:{...s.kyc,busy:'verify'}});try{const r=await PetAPI.kycVerify(s.form.aadhaar,s.form.kycOtp);if(r.verified){this.setState({kyc:{...this.state.kyc,busy:null,status:'verified',method:'aadhaar_otp'}});PetAPI.track('kyc_verified',{method:'otp'});}else{this.setState({kyc:{...this.state.kyc,busy:null,status:'failed'},sheet:'kycFail'});PetAPI.track('kyc_failed');}}catch(e){this.setState({kyc:{...this.state.kyc,busy:null},errors:{kycOtp:e.message}});}}
+  async kycFile(e){const file=e.target.files&&e.target.files[0];if(!file)return;if(file.size>5*1024*1024)return this.setState({errors:{kycFile:'File is larger than 5 MB'}});this.setState({kyc:{...this.state.kyc,file:file.name,uploading:true}});const r=await PetAPI.kycUpload(file.name);this.setState({kyc:{...this.state.kyc,uploading:false,status:r.verified?'verified':'failed',method:'document'}});PetAPI.track('kyc_verified',{method:'document'});}
+  async confirmPay(){const s=this.state;const q=this.quote();this.setState({pay:{...s.pay,busy:true}});const r=await PetAPI.confirmPayment(s.quoteId,(s.order||{}).orderId,s.simFail?'fail':null);this.setState({sheet:null,step:r.status==='paid'?'success':'failed',result:r,pay:{...this.state.pay,busy:false}});PetAPI.track(r.status==='paid'?'purchase':'payment_failed',{amount:q.total});}
+  renderVals(){
+    const s=this.state;const C=window.PET_CONFIG;
+    const base={loading:!s.ready,ready:s.ready,hasLogo:true,noLogo:false,logo:'assets/logo.png',partnerName:'PawsIndia',partnerLower:'pawsindia'};
+    if(!s.ready||!window.PetEngine||!C)return base;
+    const E=PetEngine,P=C.partner,q=this.quote(),inr=E.inr;
+    const step=s.step,meta=META[step];const hints=(this.props.showDemoHints??true)&&C.demo.showHints;
+    const f=(p,m,x)=>this.fld(p,m,x);
+    const F={mobile:f('mobile',v=>digits(v,10)),otp:f('otp',v=>digits(v,6)),first:f('first'),last:f('last'),dob:f('dob',maskDob),email:f('email'),line1:f('line1'),line2:f('line2'),
+      pin:f('pin',v=>digits(v,6),v=>{const p=v.length===6&&E.pincode(v);if(p&&p.known)this.setState(st=>({form:{...st.form,city:p.city,state:p.state}}));}),city:f('city'),state:f('state'),nomName:f('nomName'),nomRel:f('nomRel'),coupon:f('couponInput',v=>v.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,16)),aadhaar:f('aadhaar',maskAadhaar),kycOtp:f('kycOtp',v=>digits(v,6))};
+    F.email.hint=F.email.err||'Policy documents will be sent here.';F.email.hintC=F.email.err?'#D92D20':'var(--muted)';
+    F.aadhaar.hint=F.aadhaar.err||'Numbers only · 12 digits';F.aadhaar.hintC=F.aadhaar.err?'#D92D20':'var(--muted)';
+    const pin=E.pincode(s.form.pin);
+    const pet0=s.pets[0];const petIcon=pet0.type==='cat'?'tabler:cat':'tabler:dog';
+    const a0=E.ageFromDob(pet0.dob);
+    const petSummary=s.pets.length>1?`${s.pets.length} pets`:`${pet0.name||pet0.breed} · ${ageText(a0!=null?(a0<1?Math.max(.25,Math.round(a0*4)/4):Math.floor(a0)):pet0.ageYears)}`;
+    const otpWait=Math.max(0,Math.ceil(((s.otp.resendAt||0)-Date.now())/1000));
+    const kycLocked=s.kyc.status==='verified'||s.kyc.status==='failed';
+    const aV=E.V.aadhaar(s.form.aadhaar)==='';
+    const lines=q.lines.map(l=>({label:l.label,v:l.note||(l.amount<0?'−'+inr(-l.amount):inr(l.amount)),c:l.note||l.amount<0?'var(--ok)':'var(--ink)'}));
+    const resumeUrl=s.resumeToken?PetAPI.resumeUrl(s.resumeToken):'';
+    const isTerminal=step==='success'||step==='failed';
+    const nextLabel={verify:s.sso||s.verified?'Continue':s.otp.reqId?(s.otp.busy?'Verifying…':'Verify & continue'):(s.otp.busy?'Sending…':'Send OTP'),cover:'Continue',details:'Continue',kyc:s.kyc.status==='verified'?'Proceed to Pay':'Continue',pay:`Pay ${inr(q.total)}`}[step]||'Continue';
+    const nextBlocked=(step==='kyc'&&s.kyc.status!=='verified')||!!s.otp.busy;
+    const pol=(s.result||{}).policy;
+    return {...base,
+      hasLogo:!!P.logo,noLogo:!P.logo,logo:P.logo||'',partnerName:P.name,partnerLower:P.name.toLowerCase(),
+      showSaved:s.savedAt>0&&!isTerminal,canSave:!isTerminal&&!!s.resumeToken,openSave:()=>{this.persist();this.setState({sheet:'save',copied:false});PetAPI.track('save_for_later');},
+      resumeBanner:s.resumed,hideResume:()=>this.setState({resumed:false}),firstNameComma:s.form.first?`, ${s.form.first}.`:'.',
+      showProgress:!!meta,stepTitle:meta?meta[0]:'',stepLabel:meta?meta[1]:'',stepNum:meta?meta[2]:0,timeLeft:meta?meta[3]:'',
+      bars:[1,2,3].map(n=>({c:meta&&(n<meta[2]||(step==='pay'&&n===3))?'var(--ok)':meta&&n===meta[2]?'var(--brand)':'var(--line)'})),
+      isVerify:step==='verify',isCover:step==='cover',isDetails:step==='details',isKyc:step==='kyc',isPay:step==='pay',isSuccess:step==='success',isFailed:step==='failed',
+      F,mobile:s.form.mobile,sso:s.sso,ssoLabel:P.sso.label,needOtp:!s.sso&&!s.verified,otpSent:!!s.otp.reqId,
+      changeMobile:()=>this.setState({otp:{},form:{...s.form,otp:''}}),
+      resendOtp:()=>{if(!otpWait)this.sendOtp();},resendDisabled:otpWait>0,resendColor:otpWait?'var(--muted)':'var(--brand-ink)',resendLabel:otpWait?`Resend in 0:${String(otpWait).padStart(2,'0')}`:'Resend OTP',
+      showHints:hints,petIcon,petSummary,totalLabel:inr(q.total),perYearLabel:inr(q.perYear),isRefer:q.status==='refer',
+      maxPets:C.maxPets,canAddPet:s.pets.length<C.maxPets,addPet:()=>{this.setState(st=>({pets:[...st.pets,newPet(st.pets[0].type==='dog'?'cat':'dog',st.pets[0].type==='dog'?'Indie / Mixed':'Labrador Retriever',2)],editPet:st.pets.length}));PetAPI.track('add_pet');},
+      petRows:s.pets.map((p,i)=>{const editing=s.editPet===i;const ai=nearestAgeIdx(p.ageYears);return {icon:p.type==='cat'?'tabler:cat':'tabler:dog',title:p.name||`${p.type==='cat'?'Cat':'Dog'} ${i+1}`,sub:`${p.breed} · ${ageText(p.ageYears)}${i>0?' · 10% off':''}`,editing,editLabel:editing?'Done':'Edit',canRemove:i>0,
+        toggleEdit:()=>this.setState({editPet:editing?-1:i}),remove:()=>this.setState(st=>({pets:st.pets.filter((_,j)=>j!==i),editPet:-1})),
+        types:[['dog','Dog','tabler:dog'],['cat','Cat','tabler:cat']].map(([k,label,icon])=>({label,icon,bd:p.type===k?'var(--brand)':'var(--line)',bg:p.type===k?'var(--tint)':'var(--card)',onClick:()=>this.upd(`pets.${i}`,{...p,type:k,breed:E.BREEDS[k][k==='dog'?1:0]})})),
+        breed:p.breed,breeds:E.BREEDS[p.type],setBreed:e=>this.upd(`pets.${i}.breed`,e.target.value),ageLabel:ageText(p.ageYears),
+        ageDown:()=>this.upd(`pets.${i}.ageYears`,AGES[Math.max(0,ai-1)]),ageUp:()=>this.upd(`pets.${i}.ageYears`,AGES[Math.min(AGES.length-1,ai+1)])};}),
+      productName:P.product,insurerShort:'Bajaj General',insurerName:C.insurer.name,uin:C.insurer.uin,
+      benefits:BENEFITS.map(([icon,t,d])=>({icon,t,d})),
+      waiverPrice:inr(q.waiverPrice),toggleWaiver:()=>{this.setState(st=>({pedWaiver:!st.pedWaiver}));PetAPI.track('upsell_ped_waiver',{on:!s.pedWaiver});},
+      waiverBd:s.pedWaiver?'var(--brand)':'var(--line)',waiverBg:s.pedWaiver?'var(--tint)':'var(--card)',waiverTrack:s.pedWaiver?'var(--brand)':'#D9D0CC',waiverKnob:s.pedWaiver?21:3,
+      couponApplied:!!s.coupon&&q.coupon.valid,couponOpen:!(s.coupon&&q.coupon.valid),couponCode:s.coupon,couponSave:inr(q.coupon.amount||0),
+      applyCoupon:()=>{const c=E.applyCoupon(s.form.couponInput,1e5);if(!c.valid)return this.setState({errors:{...s.errors,couponInput:c.error||'Enter a code'}});this.setState({coupon:c.code,errors:{...s.errors,couponInput:''}});PetAPI.track('coupon_applied',{code:c.code});},
+      removeCoupon:()=>this.setState({coupon:'',form:{...s.form,couponInput:''}}),
+      couponChips:Object.keys(C.coupons).map(code=>({code,label:C.coupons[code].label,onClick:()=>this.setState({coupon:code,form:{...s.form,couponInput:code}})})),
+      confirm:s.confirm,toggleConfirm:()=>this.setState(st=>({confirm:!st.confirm,errors:{...st.errors,confirm:''}})),confirmBd:s.errors.confirm?'#D92D20':'var(--line)',
+      fillDemo:()=>this.fillDemo(),
+      cityBg:pin&&pin.known?'var(--bg)':'var(--card)',pinNote:pin?(pin.known?`${pin.city}, ${pin.state}${pin.cashless?' · cashless vets nearby':''}`:'We couldn’t find this pincode. Enter city and state.'):'City and state fill automatically from your pincode.',
+      pedOpts:E.PED,relations:E.RELATIONS,
+      petForms:s.pets.map((p,i)=>{const pf=k=>f(`pets.${i}.${k}`,k==='dob'?maskDob:k==='pedValue'?(v=>v.replace(/[^\d.]/g,'').slice(0,6)):null);const info=E.pedInfo(p.ped);const a=E.pedAssess(p.ped,p.pedValue);const ff={name:pf('name'),dob:pf('dob'),breed:pf('breed'),gender:pf('gender'),tag:pf('tag'),desc:pf('desc'),ped:pf('ped'),pedValue:pf('pedValue')};
+        const age=E.ageFromDob(p.dob);ff.dob.hint=ff.dob.err||(age!=null&&age>=0?`${ageText(age<1?Math.max(.25,Math.round(age*4)/4):Math.floor(age))} old`:'Pets can join from 3 months');ff.dob.hintC=ff.dob.err?'#D92D20':'var(--muted)';
+        const hasPed=!!p.ped&&p.ped!=='none';
+        return {f:ff,heading:s.pets.length>1?`Pet ${i+1} details`:'Pet details',icon:p.type==='cat'?'tabler:cat':'tabler:dog',breeds:E.BREEDS[p.type],
+          genders:E.GENDERS.map(g=>({label:g,icon:g==='Male'?'tabler:gender-male':'tabler:gender-female',bd:p.gender===g?'var(--brand)':'var(--line)',bg:p.gender===g?'var(--tint)':'var(--card)',onClick:()=>this.upd(`pets.${i}.gender`,g)})),
+          hasPed,unit:info.unit||'',pedMsg:hasPed?(a.msg||''):'',nudge:hasPed&&!s.pedWaiver,waiverOn:hasPed&&s.pedWaiver};}),
+      kycOk:s.kyc.status==='verified',kycOkMsg:s.kyc.method==='document'?'Your Aadhar card has been verified. You can now proceed to pay for your pet insurance.':'Your identity has been verified with Aadhar. You can now proceed to pay for your pet insurance.',
+      kycLocked,aadhaarBg:kycLocked?'var(--bg)':'var(--card)',kycConsent:!!s.kyc.consent,toggleKycConsent:()=>this.setState(st=>({kyc:{...st.kyc,consent:!st.kyc.consent}})),
+      kycCanSend:!s.kyc.reqId&&!kycLocked,kycSendDisabled:!aV||!s.kyc.consent||!!s.kyc.busy,kycSendOp:aV&&s.kyc.consent?1:.45,kycSendLabel:s.kyc.busy==='send'?'Sending…':'Send OTP',kycSend:()=>this.kycSend(),
+      kycOtpVisible:!!s.kyc.reqId,kycVerify:()=>this.kycVerify(),kycVerifyDisabled:kycLocked||!!s.kyc.busy,kycVerifyOp:kycLocked?.45:1,kycVerifyLabel:s.kyc.busy==='verify'?'Verifying…':s.kyc.status==='verified'&&s.kyc.method==='aadhaar_otp'?'Verified':'Verify KYC',
+      kycUploadVisible:s.kyc.status==='failed'||s.kyc.method==='document',kycNoFile:!s.kyc.file,kycHasFile:!!s.kyc.file,kycFileName:s.kyc.file||'',kycUploading:!!s.kyc.uploading,kycFileStatus:s.kyc.uploading?'Verifying document…':s.kyc.status==='verified'?'Document verified':'Upload failed',kycFileC:s.kyc.uploading?'var(--muted)':s.kyc.status==='verified'?'var(--ok)':'#D92D20',kycFile:e=>this.kycFile(e),
+      review:[
+        {icon:'tabler:user',k:'Proposer',v:`${s.form.first||''} ${s.form.last||''} · ${s.form.email||''}`,edit:()=>this.setState({step:'details'})},
+        {icon:petIcon,k:s.pets.length>1?'Pets':'Pet',v:s.pets.map(p=>`${p.name||'Pet'} (${p.breed})`).join(', '),edit:()=>this.setState({step:'details'})},
+        {icon:'tabler:shield-heart',k:'Plan',v:`₹5 lakh/year · 3 years${s.pedWaiver?' · 12-month PED cover':''}`,edit:()=>this.setState({step:'cover'})},
+        {icon:'tabler:users',k:'Nominee',v:`${s.form.nomName||'—'} (${s.form.nomRel||'—'})`,edit:()=>this.setState({step:'details'})},
+        {icon:'tabler:id-badge-2',k:'KYC',v:s.kyc.method==='document'?'Verified · Aadhar document':'Verified · Aadhar OTP',edit:()=>this.setState({step:'kyc'})}],
+      payMethods:[['upi','UPI','Google Pay, PhonePe, Paytm or any UPI app','tabler:qrcode'],['card','Credit / debit card','Visa, Mastercard, RuPay','tabler:credit-card'],['nb','Net banking','All major Indian banks','tabler:building-bank']].map(([k,label,sub,icon])=>{const on=s.pay.method===k;return {label,sub,icon,bd:on?'var(--brand)':'var(--line)',bg:on?'var(--tint)':'var(--card)',rb:on?'var(--brand)':'var(--line)',rf:on?'var(--brand)':'var(--card)',onClick:()=>this.setState({pay:{...s.pay,method:k}})};}),
+      payMethodLabel:{upi:'UPI',card:'Card',nb:'Net banking'}[s.pay.method],
+      trust:[{icon:'tabler:lock',t:'Secure payment',d:'Encrypted, PCI-DSS compliant gateway'},{icon:'tabler:shield-check',t:'IRDAI-regulated insurer',d:`${C.insurer.name}, Reg. No. ${C.insurer.irdai}`},{icon:'tabler:arrow-back-up',t:'30-day free look',d:'Cancel for a refund if you haven’t claimed'},{icon:'tabler:mail',t:'Policy in minutes',d:'Sent to your email and WhatsApp'}],
+      simFail:s.simFail,toggleSimFail:()=>this.setState(st=>({simFail:!st.simFail})),
+      emailOrYou:s.form.email||'your email',paidLabel:inr((pol&&pol.amount)||q.total),
+      policyRows:pol?[{k:'Policy number',v:pol.number},{k:'Sum insured',v:'₹5,00,000'},{k:'Policy period',v:pol.period.label},{k:'Plan',v:P.product},{k:s.pets.length>1?'Pets':'Pet',v:s.pets.map(p=>`${p.name||'Pet'} · ${p.breed.replace(' Retriever','')}`).join(', ')}]:[],
+      downloadPolicy:()=>{window.PetPolicyDoc&&PetPolicyDoc(this.state);PetAPI.track('policy_download');},
+      waShare:`https://wa.me/91${s.form.mobile||''}?text=${encodeURIComponent(`My ${P.product} policy ${pol?pol.number:''} is active.`)}`,cashlessHref:'index.html#cashless',
+      failRows:s.result&&s.result.reference?[{k:'Reference',v:s.result.reference,c:'var(--ink)'},{k:'Status',v:'Failed',c:'#D92D20'},{k:'Amount',v:inr(s.result.amount||q.total),c:'var(--ink)'}]:[],
+      retryPay:()=>this.setState({step:'pay',simFail:false}),supportTel:`tel:${P.support.phone.replace(/\s/g,'')}`,supportPhone:P.support.phone,
+      showAside:!isTerminal&&step!=='verify',lines,
+      showBar:!isTerminal,canBack:['details','kyc','pay'].includes(step),back:()=>this.back(),next:()=>this.next(),nextLabel,nextBusy:nextBlocked,nextOp:nextBlocked?.5:1,
+      openBreakup:()=>this.setState({sheet:'breakup'}),
+      sheetOpen:!!s.sheet,sBreakup:s.sheet==='breakup',sSave:s.sheet==='save',sKycFail:s.sheet==='kycFail',sGateway:s.sheet==='gateway',closeSheet:()=>{if(!s.pay.busy)this.setState({sheet:null});},
+      resumeUrl,copyLabel:s.copied?'Copied':'Copy',copyLink:()=>{try{navigator.clipboard.writeText(resumeUrl);}catch(e){}this.setState({copied:true});},
+      waResume:`https://wa.me/91${s.form.mobile||''}?text=${encodeURIComponent(`Continue your ${P.product} quote (${inr(q.total)} for 3 years): ${resumeUrl}`)}`,
+      payBusy:!!s.pay.busy,payIdle:!s.pay.busy,confirmPay:()=>this.confirmPay()
+    };
+  }
+}
+</script>
+</body>
+</html>

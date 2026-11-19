@@ -2,6 +2,15 @@
   publish = "symbo-demos-netlify/symbo-suitability-github"
   edge_functions = "symbo-demos-netlify/netlify/edge-functions"
 
+[functions]
+  directory = "symbo-demos-netlify/netlify/functions"
+  node_bundler = "esbuild"
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/pet-api/:splat"
+  status = 200
+
 [[edge_functions]]
   function = "demo-index-gate"
   path = "/"
