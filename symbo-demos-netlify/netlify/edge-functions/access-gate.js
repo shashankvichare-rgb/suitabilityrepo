@@ -1,11 +1,12 @@
 /* Symbo demo access gate. Runs in front of every path on symbo.si.
    No valid session → sign-in page. Guests only reach the demos on their invite.
-   HTML pages get the session layer (watermark, countdown, sign-out) injected. */
+   HTML pages get the page loader (start of body) and the session layer (menu, watermark, countdown) injected. */
 import { getStore } from '@netlify/blobs';
 import {
   STORE, SESSION_COOKIE, DEMOS, isPublicPath, isHubPath, demoForPath, signingSecret, verifyToken,
   getCookie, cookie, uaHash, isDocumentRequest, SECURITY_HEADERS, inviteState, inviteSessionEnd
 } from '../lib/access-core.mjs';
+import { LOADER } from '../lib/loader.mjs';
 
 const env = key => Netlify.env.get(key);
 
@@ -116,7 +117,9 @@ export default async function gate(request, context) {
   const html = await response.text();
   const layer = sessionLayer(session);
   const at = html.toLowerCase().lastIndexOf('</body>');
-  const out = at === -1 ? html + layer : html.slice(0, at) + layer + html.slice(at);
+  let out = at === -1 ? html + layer : html.slice(0, at) + layer + html.slice(at);
+  const open = /<body\b[^>]*>/i.exec(out);
+  if (open) out = out.slice(0, open.index + open[0].length) + LOADER + out.slice(open.index + open[0].length);
   const headers = new Headers(response.headers);
   headers.delete('content-length');
   headers.delete('etag');

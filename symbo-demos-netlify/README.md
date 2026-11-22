@@ -61,6 +61,15 @@ To change the icon, replace `icon.svg` and `icon-maskable.svg` and re-export the
 ### Session menu (`access/session.js`)
 
 The old bottom pill is now a corner menu button: who is signed in, All demos, each demo, Share access (team), Sign out; guests also see time left. A page can lift it above its own bottom bar with `<body data-symbo-menu-bottom="84">`.
+Next to the button every page carries a small "Private screening / Confidential" tag; the menu and the sign-in page repeat the line.
+
+### Page loader (`netlify/lib/loader.mjs`)
+
+The access gate writes the loader straight after `<body>` on every gated page: the Symbo shield, one line about
+suitability picked at random (edit the `lines` list in that file), and the confidential line. It shows from the first
+paint and fades once the page and its fonts have loaded, with a 0.6 s minimum and a 10 s cap. The hub's old 2-second
+splash is gone, and the sign-in page now moves on after 0.35 s. The demo pages load their icon fonts without holding up
+the first paint and fetch their script modules in parallel (`modulepreload`).
 
 ### Agent journey (store and bank agent portals)
 

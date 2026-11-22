@@ -80,6 +80,7 @@
         <button class="btn full" type="submit">Enter demo hub <span aria-hidden="true">→</span></button>
         <p class="fineprint">Team sessions last 12 hours and include the access console for sharing demos.</p>
       </form>
+      <p class="fineprint" style="text-align:center;letter-spacing:.04em">For private screening only · Confidential</p>
     </div>
   </section>
 </main>
@@ -148,7 +149,7 @@
   function playLoader(label, to) {
     $('#loader-label').textContent = label;
     $('#loader').classList.add('show');
-    setTimeout(() => location.replace(to), matchMedia('(prefers-reduced-motion: reduce)').matches ? 50 : 1500);
+    setTimeout(() => location.replace(to), matchMedia('(prefers-reduced-motion: reduce)').matches ? 50 : 350);
   }
 
   async function submit(form, path, payload, label) {

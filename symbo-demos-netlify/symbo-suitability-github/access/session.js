@@ -1,5 +1,6 @@
 /* Symbo demo session layer. Injected by the access gate into every gated page.
    A corner menu button: who is signed in, the demos they can open, share access (team) and sign out.
+   Next to it, on every page, a small "Private screening · Confidential" tag.
    Guests also get a name/email watermark, a countdown, auto sign-out and a revocation check every 45 s.
    A page can lift the button above its own bottom bar with <body data-symbo-menu-bottom="84">. */
 (() => {
@@ -70,7 +71,11 @@
   .out { color: #ffb3ab !important; margin-top: 6px; border-top: 1px solid rgba(255,255,255,.1); border-radius: 0 0 10px 10px; padding-top: 12px !important; }
   .banner { position: fixed; left: 50%; top: 16px; transform: translateX(-50%); z-index: 2147483647; background: #013a51; color: #fff; padding: 12px 16px; border-radius: 12px; font: 500 14px/1.4 Inter, system-ui, sans-serif; box-shadow: 0 20px 40px -12px rgba(0,0,0,.4); display: none; max-width: calc(100vw - 32px); }
   .banner.show { display: block; }
+  .conf { position: fixed; left: var(--cl, 104px); bottom: calc(var(--b, 14px) + 6px); z-index: 2147483646; height: 32px; padding: 0 10px; display: flex; flex-direction: column; justify-content: center; gap: 4px; border-radius: 10px; background: rgba(1,26,20,.62); color: rgba(255,255,255,.82);
+    font: 500 8.5px/1 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace; letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; pointer-events: none; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); transition: bottom .2s; }
+  .note { margin: 10px 6px 2px; font-size: 11px; line-height: 1.4; color: rgba(255,255,255,.5); }
   @media (max-width: 560px) {
+    .conf { height: 20px; padding: 0 8px; border-radius: 99px; bottom: calc(var(--b, 14px) + 11px); } .conf .long { display: none; }
     .fab { left: 10px; height: 42px; } .fab .who { display: none; }
     .menu { left: 8px; right: 8px; width: auto; bottom: calc(var(--b, 14px) + 52px); }
   }`;
@@ -99,7 +104,9 @@
         ${!guest ? `<p class="sec">Team</p><a href="/access/admin/">${ICON.share}<span>Share access</span></a>` : ''}
         <button class="item inst" type="button" hidden>${ICON.app}<span>${ios ? 'Add to Home Screen' : 'Install as an app'}</span></button>
         <button class="item out" type="button">${ICON.out}<span>Sign out</span></button>
-      </nav>`;
+        <p class="note">For private screening only. Confidential.</p>
+      </nav>
+      <span class="conf"><span class="long">Private screening</span><span>Confidential</span></span>`;
     const inst = root.querySelector('.inst'), banner = root.querySelector('.banner');
     showInstall = () => { inst.hidden = standalone || !(installEvent || ios); };
     showInstall();
@@ -125,6 +132,8 @@
     if (!layer.host.isConnected) document.body.appendChild(layer.host);
     const lift = Number(document.body.dataset.symboMenuBottom) || 14;
     layer.host.style.setProperty('--b', lift + 'px');
+    const r = layer.fab.getBoundingClientRect();
+    if (r.width) layer.host.style.setProperty('--cl', Math.round(r.right + 8) + 'px');
   }
 
   async function signOut() {

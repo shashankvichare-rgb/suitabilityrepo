@@ -198,7 +198,21 @@ function render() {
         <div class="meta"><p class="where"><i class="ph-bold ph-map-pin"></i>${esc(pl.where)}</p><div class="taps"><span><b>${pl.add}</b>tap${pl.add > 1 ? 's' : ''} to add</span><span><b>${pl.skip}</b>tap${pl.skip === 1 ? '' : 's'} to skip</span><span><b>Never</b>pre-selected</span></div><p class="best">${esc(pl.best)}</p></div>`}</section>
       ${S.panel ? `<aside class="pn right">${vRecord()}</aside>` : vRail()}
       <div class="dscrim" data-act="close-drawer"></div></main>`;
+  liftMenu(); clearTimeout(liftT); liftT = setTimeout(liftMenu, 450);   /* again once a sheet has slid up */
 }
+let liftT = 0;
+/* On small screens the phone's bottom bar (or the consent sheet's buttons) reaches the corner where the
+   session menu sits, so ask the menu to sit just above it. */
+function liftMenu() {
+  let lift = '';
+  if (matchMedia('(max-width: 1099px)').matches) {
+    const tops = [...document.querySelectorAll('.sh-foot, .lb-cta')].map(el => el.getBoundingClientRect())
+      .filter(r => r.width && r.left < 120 && r.bottom > innerHeight - 4 && r.top < innerHeight).map(r => r.top);
+    if (tops.length) lift = String(Math.round(innerHeight - Math.min(...tops) + 8));
+  }
+  document.body.dataset.symboMenuBottom = lift;
+}
+addEventListener('resize', liftMenu);
 
 /* ── events ── */
 function go(i) { S.pl = (i + PLACEMENTS.length) % PLACEMENTS.length; S.w = freshW(); S.w.open = S.pl === 0; if (pick()) S.res.log.add('Widget', `Offer shown · ${PLACEMENTS[S.pl].name}`, 'Not pre-selected'); render(); }
