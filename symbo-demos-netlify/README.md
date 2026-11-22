@@ -51,7 +51,7 @@ The widget's consent sheet applies them: role disclosed, full price first, terms
 
 ### Install as an app
 
-`access/app/` (public, so it loads before sign-in) holds `manifest.webmanifest` and the icons. The sign-in page and the hub
+`access/app/` (public, so it loads before sign-in) holds `manifest.json` and the icons. The sign-in page and the hub
 link them statically; `session.js` adds them to every other page and shows "Install as an app" (Chrome, Edge) or
 "Add to Home Screen" (iOS) in the session menu. No service worker: the site is gated and never cached.
 To change the icon, replace `icon.svg` and `icon-maskable.svg` and re-export the PNGs at 48, 180, 192 and 512.

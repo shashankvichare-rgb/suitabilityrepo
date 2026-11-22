@@ -19,7 +19,7 @@
     const head = document.head;
     if (!head || head.querySelector('link[rel="manifest"]')) return;
     const add = (tag, attrs) => { const el = document.createElement(tag); for (const k in attrs) el.setAttribute(k, attrs[k]); head.appendChild(el); };
-    add('link', { rel: 'manifest', href: '/access/app/manifest.webmanifest' });
+    add('link', { rel: 'manifest', href: '/access/app/manifest.json' });
     add('link', { rel: 'apple-touch-icon', href: '/access/app/apple-touch-icon.png' });
     add('meta', { name: 'mobile-web-app-capable', content: 'yes' });
     add('meta', { name: 'apple-mobile-web-app-capable', content: 'yes' });
