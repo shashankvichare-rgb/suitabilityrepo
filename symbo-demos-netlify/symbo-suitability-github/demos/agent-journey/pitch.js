@@ -27,6 +27,22 @@ export function signals(id, ans, first) {
   return s;
 }
 
+/* Two- or three-word reasons for the recommendation card. */
+export function tags(id, ans) {
+  const t = [];
+  if (id === 'ew' && ans.repair === 'Yes') t.push('Wants repairs covered after warranty');
+  if (id === 'adld' && ans.accident === 'Yes') t.push('Worried about drops and spills');
+  if (id === 'health' && ans.health && ans.health !== 'None') t.push(ans.health === 'Both' ? 'Uses consults and check-ups' : `Uses ${ans.health.toLowerCase()}`);
+  if (id === 'health' && ans.members) t.push(ans.members === 'Two' ? '2 adults' : '1 adult');
+  if (id === 'epicure' && ans.appliances && ans.appliances !== 'None') t.push(`${ans.appliances} appliance${ans.appliances === 'One' ? '' : 's'}`);
+  if (id === 'epicure' && ans.upi === 'Yes') t.push('UPI user');
+  if (id === 'epicure' && ans.ott === 'Yes') t.push('Wants OTT');
+  if (id === 'galaxy' && ans.hospital === 'Yes') t.push('Hospital stay would strain EMIs');
+  if (id === 'galaxy' && ans.hospitalCover === 'No') t.push('No hospital cash today');
+  if (id === 'insta' && ans.future === 'Yes') t.push('Wants future finance');
+  return t;
+}
+
 /* ctx = { first, assetName, assetCost, ans, p } where p is the assessed product with the chosen variant and price */
 export function pitchFor(ctx) {
   const { first, assetName, assetCost, ans, p } = ctx;

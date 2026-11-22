@@ -66,7 +66,7 @@ async function stillValid(session) {
 function sessionLayer(session) {
   const data = {
     k: session.k, n: session.n || '', e: session.e || '', c: session.c || '', exp: session.exp,
-    demos: session.s.includes('*') ? DEMOS.map(d => ({ id: d.id, name: d.name, home: d.home }))
+    demos: session.s.includes('*') ? DEMOS.filter(d => !d.hidden).map(d => ({ id: d.id, name: d.name, home: d.home }))
       : DEMOS.filter(d => session.s.includes(d.id)).map(d => ({ id: d.id, name: d.name, home: d.home }))
   };
   const json = JSON.stringify(data).replace(/</g, '\\u003c').replace(/[\u2028\u2029]/g, '');

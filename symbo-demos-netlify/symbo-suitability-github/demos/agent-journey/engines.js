@@ -1,6 +1,6 @@
 /* One interface over both channels, so the portal and the buy page treat a store sale and a bank loan alike. */
 import { ew, initialMasters, relevantQuestions as storeQuestions, assess as storeAssess } from './catalogue.js';
-import { signals as storeSignals, pitchFor as storePitch, ICONS as STORE_ICONS } from './pitch.js';
+import { signals as storeSignals, tags as storeTags, pitchFor as storePitch, ICONS as STORE_ICONS } from './pitch.js';
 import * as BANK from './bank.js';
 import { CHANNELS, agentLabel, inr, firstName, newRef } from './store.js';
 
@@ -33,6 +33,7 @@ export const ENGINES = {
     questions: sale => storeQuestions(storeApp(sale)),
     assess: sale => storeAssess(storeApp(sale), initialMasters).map(p => ({ ...p, disabled: false })),
     signals: (sale, id) => storeSignals(id, sale.answers, firstName(sale.customer.name)),
+    tags: (sale, id) => storeTags(id, sale.answers),
     pitch: (sale, p) => storePitch({ first: firstName(sale.customer.name), assetName: sale.subject, assetCost: sale.customer.assetCost, ans: sale.answers, p }),
     facts: () => [],
     priceNote: p => p.id === 'ew' ? 'one-time, GST included' : 'for one year'
@@ -49,6 +50,7 @@ export const ENGINES = {
     questions: sale => BANK.relevantQuestions(sale.loan),
     assess: sale => BANK.assess(sale.loan, sale.answers),
     signals: (sale, id) => BANK.signals(id, sale.answers, sale.loan),
+    tags: (sale, id) => BANK.tags(id, sale.answers),
     pitch: (sale, p) => BANK.pitchFor(sale.loan, sale.answers, p),
     facts: sale => {
       const l = sale.loan;

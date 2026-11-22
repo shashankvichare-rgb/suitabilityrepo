@@ -19,7 +19,33 @@ Every page on symbo.si is behind one access gate. Nobody sees a demo without sig
 | Pet insurance | `/demos/pet-insurance/` | `pet` |
 | Agent journey · consumer durables (earlier build) | `/demos/agent-suitaibility-demo/` | `agent` |
 
+### Hub order
+
+01 Suitability in action · 02 Embedded widget journey · 03 Agent journey · 04 Motor agent journey · 05 Pet insurance journey.
+The Credit Life journey and the first consumer-durables agent build stay reachable by URL and invitable, but are off the hub and the session menu (`hidden: true` in `access-core.mjs`).
+
+### Shared suitability engine (`hub/engine/`)
+
+- `catalogue.js` is generated from the Symbo Product Master sheet (Products, VAS, Bundles tabs): 91 products, 196 services, 28 bundles, tagged by 11 partner types. Rebuild it from the sheet; do not edit by hand.
+- `engine.js` runs one pipeline for every partner type: about 43 datapoints → catalogue mapping → eligibility → need match → overlap and affordability (premium cap by ticket size) → guardrails → ranked mix, services and a bundle. It writes a hash-chained audit log and returns an API-shaped request/response. Prices are the master's indicative rates.
+- Compliance markers are short labels with a source (RBI sales-practice directions, RBI KFS circular / Digital Lending Directions, Fair Practices Code, IRDAI policyholder regulations, DPDP). They are demo markers, not legal advice: confirm wording against the current circulars before a partner sees them.
+- `hub/brand/` holds the Symbo and Digit logos ("Insured by Digit").
+
+### Suitability in action (`demos/suitabilityengine/`, desktop only)
+
+Eight partner types, one customer each. Change a signal and the engine re-runs: pipeline counts, every product as a dot in the catalogue field, the recommended mix (hover a card for why, the shield for compliance), services, pricing mix, protection gaps. Right panel: audit log (with a tamper test), guardrails, API. "Catalogue map" shows product mapping by partner type. The previous page is kept at `classic.html`.
+
+### Embedded widget journey (`demos/loanbee-checkout/`)
+
+LoanBee checkout on the shared engine. Borrower panel on the left, decision record on the right (closed until opened; drawers on mobile). Five widget placements, switched with the arrows, dots, arrow keys or a swipe: inline card, EMI line switch, pre-sign sheet, checklist row, after approval. Adding always goes through one consent sheet (price, GST, free look, "loan does not depend on this"); skipping is never more than one tap. The previous page is kept at `classic.html`.
+
+### Session menu (`access/session.js`)
+
+The old bottom pill is now a corner menu button: who is signed in, All demos, each demo, Share access (team), Sign out; guests also see time left. A page can lift it above its own bottom bar with `<body data-symbo-menu-bottom="84">`.
+
 ### Agent journey (store and bank agent portals)
+
+Three steps: answer the questions on one page (tap to select), mark each recommendation Interested / Not now on its card (reasons as tags, script under "Pitch points"), share the quote.
 
 Hub card 06. Opens on a sign-in page with two portals (store first). Desktop is a portal with a collapsible sidebar;
 below 1024 px it becomes a mobile app (drawer menu, sticky action bar, customer record as an accordion).

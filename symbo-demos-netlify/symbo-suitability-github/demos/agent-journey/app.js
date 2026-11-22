@@ -6,7 +6,7 @@ import { LOANS, DEFAULT_LOAN, findLoan, short } from './bank.js';
 
 const $ = s => document.querySelector(s);
 const SESSION = 'agent-portal:session';
-const STEPS = ['review', 'needs', 'recs', 'pitch', 'share'];
+const STEPS = ['needs', 'recs', 'share'];
 const STAGE_ICON = { Customer: 'ph-user', Needs: 'ph-chats-circle', Recommendation: 'ph-sparkle', Pitch: 'ph-megaphone-simple', Share: 'ph-share-network', Consent: 'ph-signature', Purchase: 'ph-seal-check' };
 const OPEN = ['Quote ready', 'Quote shared', 'Viewed'];
 const RETAIL = { store: [['Motor', 'ph-car-profile'], ['Health', 'ph-heartbeat'], ['Credit Life', 'ph-umbrella-simple'], ['Term Life', 'ph-shield'], ['Travel', 'ph-airplane-tilt'], ['Home', 'ph-house']],
@@ -22,7 +22,7 @@ const label = () => agentLabel(S.ch);
 const mobile = () => matchMedia('(max-width: 1024px)').matches;
 const data = () => (S.data ||= load(S.ch, SEEDS[S.ch]));
 const stageLabels = () => ({ Customer: S.ch === 'bank' ? 'Loan & customer' : 'Customer & purchase', Needs: S.ch === 'bank' ? 'Suitability' : 'Needs conversation', Recommendation: 'Symbo recommendation', Pitch: 'Pitch', Share: 'Quote & sharing', Consent: 'Customer review & consent', Purchase: 'Purchase' });
-const stepNames = () => S.ch === 'bank' ? ['Loan details', 'Suitability', 'Recommendations', 'Pitch', 'Share & consent'] : ['Customer & purchase', 'Needs', 'Recommendations', 'Pitch', 'Share & consent'];
+const stepNames = () => S.ch === 'bank' ? ['Loan & suitability', 'Recommend & pitch', 'Share & consent'] : ['Customer & needs', 'Recommend & pitch', 'Share & consent'];
 const pill = st => `<span class="pill st-${String(st).toLowerCase().replace(/\s+/g, '-')}">${esc(st)}</span>`;
 const greet = () => { const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'; };
 const initials = n => n.split(/\s+/).map(x => x[0]).join('').slice(0, 2).toUpperCase();
@@ -54,8 +54,8 @@ function signOut() { try { sessionStorage.removeItem(SESSION); } catch { /* igno
 /* ── sale lifecycle ─────────────────────── */
 function startFrom(source) {
   S.sale = E().start(source);
-  S.qi = 0; S.assessed = []; S.picks = {}; S.pi = 0;
-  go('journey', 'review');
+  S.assessed = []; S.picks = {}; S.editing = false;
+  go('journey', 'needs');
 }
 function readCustomer() {
   const form = $('#cust'); if (!form) return;
@@ -64,29 +64,28 @@ function readCustomer() {
   for (const k of ['age', 'assetCost', 'loanAmount', 'tenure']) c[k] = Number(String(f.get(k) || '').replace(/[^\d.]/g, ''));
   E().refresh(S.sale);
 }
-function submitReview() {
+/* Logged once, the first time the agent acts on this customer. */
+function logCustomer() {
   const s = S.sale;
-  if (S.ch === 'store') {
-    readCustomer();
-    try { validateApplication({ ...s.customer, warrantyYears: 1, purchaseDays: 0, usage: 'home', condition: 'new', answers: {} }); } catch (e) { S.err = e.message; return render(); }
-    log(s, label(), 'Customer', `Captured invoice ${s.sourceId} for ${s.customer.name}`, `${s.subject} · ${s.subjectDetail} · ${inr(s.customer.assetCost)} · loan ${inr(s.customer.loanAmount)} over ${s.customer.tenure} months`);
-  } else {
-    log(s, label(), 'Customer', `Reviewed loan ${s.loan.id} for ${s.customer.name}`, `${s.loan.product} · ${short(s.loan.amount)} · EMI ${inr(s.loan.emi)} × ${s.loan.tenure} · ${s.loan.occ}`);
-  }
-  persist(); S.qi = 0; go('journey', 'needs');
+  if ((s.audit || []).some(e => e.stage === 'Customer')) return;
+  if (S.ch === 'store') log(s, label(), 'Customer', `Opened invoice ${s.sourceId} for ${s.customer.name}`, `${s.subject} · ${s.subjectDetail} · ${inr(s.customer.assetCost)} · loan ${inr(s.customer.loanAmount)} over ${s.customer.tenure} months`);
+  else log(s, label(), 'Customer', `Opened loan ${s.loan.id} for ${s.customer.name}`, `${s.loan.product} · ${short(s.loan.amount)} · EMI ${inr(s.loan.emi)} × ${s.loan.tenure} · ${s.loan.occ}`);
 }
 function answer(id, value) {
-  const prev = S.sale.answers[id];
-  if (value === null) delete S.sale.answers[id]; else S.sale.answers[id] = value;
-  if (id === 'health' && S.ch === 'store' && (value === 'None' || value === null)) delete S.sale.answers.members;
-  const qs = E().questions(S.sale);
-  if (prev !== value) {
-    const q = qs.find(x => x.id === id) || { title: id };
-    log(S.sale, label(), 'Needs', value === null ? `Skipped: ${q.title}` : `Asked: ${q.title}`, value === null ? '' : `Answer: ${value}`);
-  }
-  if (S.qi < qs.length - 1) { S.qi++; render(); } else compute();
+  logCustomer();
+  const next = S.sale.answers[id] === value ? null : value;   /* tap again to clear */
+  if (next === null) delete S.sale.answers[id]; else S.sale.answers[id] = next;
+  if (id === 'health' && S.ch === 'store' && (next === 'None' || next === null)) delete S.sale.answers.members;
+  const q = E().questions(S.sale).find(x => x.id === id) || { title: id };
+  log(S.sale, label(), 'Needs', next === null ? `Cleared: ${q.title}` : `Asked: ${q.title}`, next === null ? '' : `Answer: ${next}`);
+  render();
 }
 function compute() {
+  if (S.ch === 'store') {
+    readCustomer();
+    try { validateApplication({ ...S.sale.customer, warrantyYears: 1, purchaseDays: 0, usage: 'home', condition: 'new', answers: {} }); } catch (e) { S.err = e.message; S.editing = true; return render(); }
+  }
+  logCustomer();
   const qs = E().questions(S.sale);
   S.assessed = E().assess(S.sale);
   S.picks = {};
@@ -94,20 +93,28 @@ function compute() {
   const rec = S.assessed.filter(p => p.recommended && p.eligible && !p.disabled);
   S.sale.questions = { answered: qs.filter(q => S.sale.answers[q.id]).length, total: qs.length };
   S.sale.recommended = rec.map(p => p.id);
+  S.sale.responses = {};
   log(S.sale, 'Symbo', 'Recommendation', `${rec.length} of ${S.assessed.length} products recommended`, rec.map(p => `${p.name}${p.variant ? ' (' + p.variant + ')' : ''}`).join(', ') || 'None');
   for (const p of S.assessed.filter(p => !(p.recommended && p.eligible && !p.disabled))) log(S.sale, 'Symbo', 'Recommendation', `Not recommended: ${p.name}`, p.reason);
   persist();
   go('journey', 'computing');
-  setTimeout(() => { if (S.view === 'journey' && S.step === 'computing') go('journey', 'recs'); }, 3400);
+  setTimeout(() => { if (S.view === 'journey' && S.step === 'computing') go('journey', 'recs'); }, 1700);
 }
-function respond(kind) {
-  const list = ranked(), { p } = list[S.pi];
-  S.sale.responses[p.id] = kind;
-  log(S.sale, label(), 'Pitch', kind === 'interested' ? `Pitched ${p.name}: customer interested` : `Pitched ${p.name}: not now`, `${p.variant ? p.variant + ' · ' : ''}${inr(p.price)}`);
-  if (S.pi < list.length - 1) { S.pi++; persist(); return go('journey', 'pitch'); }
+function setResponse(id, kind) {
+  if (S.sale.responses[id] === kind) delete S.sale.responses[id]; else S.sale.responses[id] = kind;
+  render();
+}
+/* One tap closes the pitch: every recommended product is logged with its outcome. */
+function createQuote() {
+  const list = ranked();
+  for (const { p } of list) {
+    const k = S.sale.responses[p.id] || 'not_now'; S.sale.responses[p.id] = k;
+    log(S.sale, label(), 'Pitch', k === 'interested' ? `Pitched ${p.name}: customer interested` : `Pitched ${p.name}: not now`, `${p.variant ? p.variant + ' · ' : ''}${inr(p.price)}`);
+  }
   const items = list.filter(x => S.sale.responses[x.p.id] === 'interested').map(x => ({ id: x.p.id, name: x.p.name, variant: x.p.variant || '', price: Math.round(x.p.price) }));
   if (!items.length) {
-    S.sale.status = 'Not taken'; log(S.sale, label(), 'Pitch', 'Customer chose not to take any product now');
+    S.sale.status = list.length ? 'Not taken' : 'No fit';
+    log(S.sale, label(), 'Pitch', list.length ? 'Customer chose not to take any product now' : 'No suitable product; nothing pitched');
     persist(); toast('Logged to the customer record.'); S.sale = null; return go('home');
   }
   S.sale.quote = { items, total: items.reduce((n, x) => n + x.price, 0), expiresAt: Date.now() + 48 * 3600e3 };
@@ -239,88 +246,64 @@ function stepper() {
   const i = STEPS.indexOf(S.step === 'computing' ? 'recs' : S.step);
   return `<ol class="stepper">${stepNames().map((n, k) => `<li class="${k < i ? 'done' : k === i ? 'cur' : ''}"><span>${k < i ? '<i class="ph-bold ph-check"></i>' : k + 1}</span><b>${n}</b></li>`).join('')}</ol>`;
 }
-function jReview() {
+/* Everything already known about the customer, in one strip. Nothing to re-type. */
+function summaryStrip() {
   const s = S.sale;
-  if (S.ch === 'bank') {
-    const l = s.loan;
-    const g = rows => `<div class="facts">${rows.map(([k, v]) => `<div><small>${k}</small><b>${esc(v)}</b></div>`).join('')}</div>`;
-    return `<div class="jh"><h2>${esc(l.name)}</h2><p><span class="mono">${esc(l.id)}</span> · ${esc(l.product)} · sanctioned ${dateOnly(l.sanctionedAt)}</p></div>
-      <h4 class="sub">Loan</h4>${g([['Sanctioned amount', short(l.amount)], ['Interest rate', l.rate + '% p.a.'], ['Tenure', l.tenure + ' months'], ['EMI', inr(l.emi)], ['Other EMIs', l.existingEmi ? inr(l.existingEmi) : 'None'], ['Disbursal', 'Pending protection review']])}
-      <h4 class="sub">Customer</h4>${g([['Age', l.age + ' years'], ['Occupation', l.occ], ['Employer / business', l.employer], ['Monthly income', inr(l.income)], ['City', l.city], ['Mobile', '•••••• ' + l.mobile.slice(-4)]])}
-      <div class="kyc"><span><i class="ph-fill ph-check-circle"></i> KYC verified</span><span><i class="ph-fill ph-check-circle"></i> Loan sanctioned</span><span><i class="ph-fill ph-check-circle"></i> Mobile verified</span></div>`;
-  }
-  const c = s.customer;
+  const facts = S.ch === 'bank' ? E().facts(s) : [['Product', `${s.customer.brand} ${s.customer.model}`], ['Invoice', inr(s.customer.assetCost)], ['Loan', `${inr(s.customer.loanAmount)} · ${s.customer.tenure} months`], ['Age', s.customer.age], ['City', s.customer.city]];
+  return `<div class="sum"><div class="sum-h"><span class="ini big">${esc(initials(s.customer.name))}</span><div><b>${esc(s.customer.name)}</b><small><span class="mono">${esc(s.sourceId)}</span> · ${esc(s.subject)}</small></div>
+      ${S.ch === 'bank' ? '<span class="kyc-ok"><i class="ph-fill ph-check-circle"></i> KYC verified</span>' : `<button class="linkbtn" data-act="edit"><i class="ph-bold ph-pencil-simple"></i> ${S.editing ? 'Done' : 'Edit'}</button>`}</div>
+    <div class="sum-f">${facts.map(([k, v]) => `<span><small>${k}</small>${esc(v)}</span>`).join('')}</div>${S.ch === 'store' && S.editing ? editForm() : ''}</div>`;
+}
+function editForm() {
+  const c = S.sale.customer;
   const opt = ew.assets.map(a => `<option value="${esc(a.id)}"${a.id === c.assetId ? ' selected' : ''}>${esc(a.name)}</option>`).join('');
-  const f = (name, lbl, val, extra = '', full = false) => `<label class="f${full ? ' full' : ''}"><span>${lbl}</span><input name="${name}" value="${esc(val)}" ${extra}></label>`;
-  return `<div class="jh"><h2>${esc(c.name)}</h2><p><span class="mono">${esc(s.sourceId)}</span> · financed purchase · from the store invoice</p></div>
-    <form id="cust" novalidate><h4 class="sub">Customer</h4><div class="fgrid">
-      ${f('name', 'Full name', c.name, 'autocomplete="off"')}${f('mobile', 'Mobile', c.mobile, 'inputmode="numeric" maxlength="10"')}${f('age', 'Age', c.age, 'inputmode="numeric" maxlength="2"')}
-      ${f('email', 'Email', c.email, 'type="email"')}${f('city', 'City', c.city)}${f('pincode', 'PIN code', c.pincode, 'inputmode="numeric" maxlength="6"')}</div>
-      <h4 class="sub">Purchase</h4><div class="fgrid">
+  const f = (name, lbl, val, extra = '') => `<label class="f"><span>${lbl}</span><input name="${name}" value="${esc(val)}" ${extra}></label>`;
+  return `<form id="cust" class="edit" novalidate><div class="fgrid">
+      ${f('name', 'Full name', c.name)}${f('mobile', 'Mobile', c.mobile, 'inputmode="numeric" maxlength="10"')}${f('age', 'Age', c.age, 'inputmode="numeric" maxlength="2"')}
+      ${f('email', 'Email', c.email, 'type="email"')}${f('city', 'City', c.city)}${f('pincode', 'PIN code', c.pincode, 'inputmode="numeric" maxlength="6"')}
       <label class="f"><span>Product</span><select name="assetId">${opt}</select></label>${f('brand', 'Brand', c.brand)}${f('model', 'Model', c.model)}
       ${f('assetCost', 'Invoice value (₹)', c.assetCost, 'inputmode="numeric"')}${f('loanAmount', 'Loan amount (₹)', c.loanAmount, 'inputmode="numeric"')}${f('tenure', 'Tenure (months)', c.tenure, 'inputmode="numeric"')}</div>
-      <p class="fixed"><i class="ph-bold ph-info"></i> New · home use · billed today · 1-year manufacturer warranty</p>
       ${S.err ? `<p class="err" role="alert">${esc(S.err)}</p>` : ''}</form>`;
 }
 function jNeeds() {
-  const qs = E().questions(S.sale);
-  S.qi = Math.min(S.qi, qs.length - 1);
-  const q = qs[S.qi], first = firstName(S.sale.customer.name), cur = S.sale.answers[q.id], facts = E().facts(S.sale);
-  return `${facts.length ? `<div class="filed"><p class="eyebrow"><i class="ph-bold ph-file-text"></i> From the loan file</p><div>${facts.map(([k, v]) => `<span><small>${k}</small>${esc(v)}</span>`).join('')}</div></div>` : ''}
-    <div class="qdots">${qs.map((x, i) => `<button class="${i === S.qi ? 'cur' : S.sale.answers[x.id] ? 'done' : ''}" data-q="${i}" aria-label="Question ${i + 1}"></button>`).join('')}</div>
-    <div class="ask"><div class="ask-top"><span class="ask-av"><i class="ph-bold ph-chat-teardrop-text"></i></span>Ask ${esc(first)} · ${S.qi + 1} of ${qs.length}</div>
-      <p class="ask-q">“${esc(q.title)}”</p><p class="ask-why"><i class="ph-bold ph-lightbulb"></i> ${esc(q.hint)}</p></div>
-    <div class="opts">${q.options.map(o => `<button class="opt${cur === o ? ' on' : ''}" data-ans="${esc(o)}" data-qid="${q.id}"><span>${esc(o)}</span><i class="ph-bold ph-check"></i></button>`).join('')}</div>
-    <button class="skip" data-skip="${q.id}">Customer prefers not to say · skip</button>`;
+  const qs = E().questions(S.sale), first = firstName(S.sale.customer.name), n = qs.filter(q => S.sale.answers[q.id]).length;
+  return `${summaryStrip()}
+    <div class="qh"><h3>Ask ${esc(first)}</h3><span>${n} of ${qs.length} answered · tap an answer, tap again to clear</span></div>
+    <ol class="qlist">${qs.map((q, i) => { const cur = S.sale.answers[q.id]; return `<li class="${cur ? 'done' : ''}"><span class="qn">${cur ? '<i class="ph-bold ph-check"></i>' : i + 1}</span><p>${esc(q.title)}</p>
+      <div class="qo">${q.options.map(o => `<button class="${cur === o ? 'on' : ''}" data-ans="${esc(o)}" data-qid="${q.id}">${esc(o)}</button>`).join('')}</div></li>`; }).join('')}</ol>`;
 }
 function jComputing() {
-  const c = S.sale.customer, first = firstName(c.name);
-  const steps = [`Reading ${S.sale.questions?.answered ?? 0} answers from ${first}`, `Checking eligibility for ${S.assessed.length} products`, 'Matching stated needs to cover', S.ch === 'bank' ? `Pricing against the ${short(S.sale.loan.amount)} loan and ${inr(S.sale.loan.emi)} EMI` : `Pricing for ${S.sale.subject} at ${inr(c.assetCost)}`, 'Running suitability guardrails'];
+  const first = firstName(S.sale.customer.name);
+  const steps = [`Reading ${S.sale.questions?.answered ?? 0} answers`, `Checking ${S.assessed.length} products`, 'Matching needs to cover', 'Running suitability guardrails'];
   return `<div class="computing"><div class="cmp-mark"><img src="./assets/symbo-mark.png" alt=""><span class="ring"></span></div><h2>Finding the right cover for ${esc(first)}</h2>
-    <ul class="cmp-steps">${steps.map((s, i) => `<li style="animation-delay:${i * 520}ms"><i class="ph-bold ph-check-circle"></i>${esc(s)}</li>`).join('')}</ul><div class="skel"><i></i><i></i><i></i></div></div>`;
+    <ul class="cmp-steps">${steps.map((s, i) => `<li style="animation-delay:${i * 320}ms"><i class="ph-bold ph-check-circle"></i>${esc(s)}</li>`).join('')}</ul></div>`;
 }
 function jRecs() {
   const first = firstName(S.sale.customer.name), list = ranked(), icons = E().icons;
   const others = S.assessed.filter(p => !(p.recommended && p.eligible && !p.disabled));
   const card = ({ p, sig }, i) => {
-    const raw = S.assessed.find(x => x.id === p.id);
+    const raw = S.assessed.find(x => x.id === p.id), k = E().pitch(S.sale, p), st = S.sale.responses[p.id] || '';
     const vsel = raw.variants?.length > 1 ? `<select class="vsel" data-variant="${p.id}" aria-label="${esc(p.name)} variant">${raw.variants.map(v => `<option${v.name === p.variant ? ' selected' : ''}>${esc(v.name)}</option>`).join('')}</select>` : (p.variant ? `<span class="vfix">${esc(p.variant)}</span>` : '');
-    return `<article class="rec pop" style="animation-delay:${i * 220 + 100}ms">
-      <div class="rec-h"><span class="rank">${i + 1}</span><span class="r-ico"><i class="ph-bold ${icons[p.id]}"></i></span><div class="r-t"><b>${esc(p.name)}</b><small>${esc(p.category)}</small></div><span class="fit">${sig >= 2 ? 'Strong fit' : 'Good fit'}</span></div>
-      <ul class="why">${E().signals(S.sale, p.id).slice(0, 3).map(w => `<li><i class="ph-bold ph-check"></i>${esc(w)}</li>`).join('')}</ul>
-      <div class="rec-f"><div>${vsel}</div><b class="price">${inr(p.price)}</b></div>
-      <p class="matches"><i class="ph-bold ph-target"></i> Matches ${sig} of ${esc(first)}'s answer${sig === 1 ? '' : 's'} · pitch script ready</p></article>`;
+    return `<article class="rc ${st}" style="animation-delay:${i * 90}ms">
+      <div class="rc-h"><span class="r-ico"><i class="ph-bold ${icons[p.id]}"></i></span><div class="r-t"><b>${esc(p.name)}</b>${vsel}</div><div class="rc-p"><b>${inr(p.price)}</b><em class="fit">${sig >= 2 ? 'Strong fit' : 'Good fit'}</em></div></div>
+      <div class="tagrow">${E().tags(S.sale, p.id).map(t => `<span><i class="ph-bold ph-check"></i>${esc(t)}</span>`).join('')}</div>
+      <p class="line"><i class="ph-bold ph-megaphone-simple"></i>${esc(k.headline)}</p>
+      <details class="script"><summary>Pitch points</summary><ul>${k.points.map(x => `<li>${esc(x)}</li>`).join('')}<li class="warn"><b>Be clear:</b> ${esc(k.limits)}</li><li class="obj"><b>${esc(k.objection[0])}</b> ${esc(k.objection[1])}</li></ul></details>
+      <div class="rc-a"><button class="tog no${st === 'not_now' ? ' on' : ''}" data-resp="not_now" data-id="${p.id}">Not now</button><button class="tog yes${st === 'interested' ? ' on' : ''}" data-resp="interested" data-id="${p.id}"><i class="ph-bold ph-check"></i> Interested</button></div></article>`;
   };
-  const nots = others.length ? `<details class="nots pop" style="animation-delay:900ms" open><summary>Not suggested for ${esc(first)} (${others.length})</summary>
-    ${others.map(p => `<div class="no${p.disabled ? ' locked' : ''}"><i class="ph-bold ${icons[p.id]}"></i><div><b>${esc(p.name)}${p.disabled ? ' <span class="lock"><i class="ph-bold ph-lock-simple"></i> Not enabled</span>' : ''}</b><small>${esc(p.reason)}</small></div></div>`).join('')}</details>` : '';
-  if (!list.length) return `<div class="jh"><h2>Nothing fits ${esc(first)} today</h2><p>None of the answers point to a product, so there is nothing to pitch.</p></div>${nots}`;
-  return `<div class="jh"><h2>${list.length} product${list.length > 1 ? 's' : ''} fit ${esc(first)}</h2><p>Ranked by how many of ${esc(first)}'s answers each one meets. Pitch them one by one.</p></div>
-    <div class="rec-list">${list.map(card).join('')}</div>${nots}`;
-}
-function jPitch() {
-  const list = ranked(), { p } = list[S.pi], first = firstName(S.sale.customer.name);
-  const k = E().pitch(S.sale, p);
-  return `<div class="pdots">${list.map((x, i) => `<i class="${i < S.pi ? (S.sale.responses[x.p.id] === 'interested' ? 'yes' : 'no') : i === S.pi ? 'cur' : ''}"></i>`).join('')}<span>Pitch ${S.pi + 1} of ${list.length}</span></div>
-    <article class="pitch">
-      <div class="p-head"><span class="r-ico big"><i class="ph-bold ${E().icons[p.id]}"></i></span><div><small>${esc(p.name)}${p.variant ? ' · ' + esc(p.variant) : ''}</small><h2>${esc(k.headline)}</h2></div><div class="p-price"><b>${inr(p.price)}</b><span>${E().priceNote(p)}</span></div></div>
-      <div class="p-grid"><div>
-        <section class="p-sec why-sec"><p class="eyebrow">Why Symbo chose this for ${esc(first)}</p><ul>${k.why.map(w => `<li><i class="ph-bold ph-check-circle"></i>${esc(w)}</li>`).join('')}</ul></section>
-        <section class="p-sec say"><p class="eyebrow"><i class="ph-bold ph-microphone"></i> Say this</p><p>${esc(k.say)}</p></section>
-      </div><div>
-        <section class="p-sec"><p class="eyebrow">Key points</p><ul class="pts">${k.points.map(x => `<li>${esc(x)}</li>`).join('')}</ul></section>
-        <section class="p-sec limits"><p class="eyebrow"><i class="ph-bold ph-warning-circle"></i> Be clear about</p><p>${esc(k.limits)}</p></section>
-        <section class="p-sec obj"><p class="eyebrow">If ${esc(first)} asks</p><p class="oq">${esc(k.objection[0])}</p><p class="oa">${esc(k.objection[1])}</p></section>
-      </div></div></article>`;
+  const nots = others.length ? `<div class="nots2"><small>Not suggested</small>${others.map(p => `<span class="${p.disabled ? 'locked' : ''}" title="${esc(p.reason)}">${p.disabled ? '<i class="ph-bold ph-lock-simple"></i>' : ''}${esc(p.name)}${p.disabled ? ' · not enabled' : ''}</span>`).join('')}</div>` : '';
+  if (!list.length) return `<div class="jh"><h2>Nothing fits ${esc(first)} today</h2><p>No answer points to a product, so there is nothing to pitch.</p></div>${nots}`;
+  return `<div class="qh"><h3>${list.length} fit ${esc(first)}</h3><span>Mark each one as you pitch it</span></div><div class="rc-list">${list.map(card).join('')}</div>${nots}`;
 }
 function jShare() {
   const s = S.sale, first = firstName(s.customer.name), icons = E().icons;
   const msg = waMessage(s), link = buyLink(s);
   const bubble = esc(msg).replace(esc(link), `<a href="${esc(link)}" target="_blank" rel="noopener">${esc(link.length > 60 ? link.slice(0, 58) + '…' : link)}</a>`).replace(/\n/g, '<br>');
-  return `<div class="jh"><h2>Quote ready for ${esc(first)}</h2><p>${esc(first)} reviews each product and gives consent on their own phone.</p></div>
+  return `<div class="qh"><h3>Quote ready for ${esc(first)}</h3><span>${esc(first)} reviews and consents on their own phone</span></div>
     <div class="share-grid"><div>
       <div class="quote"><div class="q-top"><span class="mono">${esc(s.ref)}</span>${pill(s.status)}</div>
         ${s.quote.items.map(x => `<div class="q-row"><i class="ph-bold ${icons[x.id]}"></i><span>${esc(x.name)}${x.variant ? ` <small>${esc(x.variant)}</small>` : ''}</span><b>${inr(x.price)}</b></div>`).join('')}
-        <div class="q-total"><span>Total · GST included</span><b>${inr(s.quote.total)}</b></div><p class="muted small">Valid for 48 hours.</p></div>
+        <div class="q-total"><span>Total · GST included</span><b>${inr(s.quote.total)}</b></div></div>
       <div class="share-btns">
         <button class="btn wa-btn" data-act="wa"><i class="ph-fill ph-whatsapp-logo"></i> Share on WhatsApp</button>
         <div class="two"><button class="btn secondary" data-act="copy-msg"><i class="ph-bold ph-copy"></i> Copy message</button><button class="btn secondary" data-act="copy-link"><i class="ph-bold ph-link"></i> Copy link</button></div>
@@ -331,11 +314,12 @@ function jShare() {
 }
 function jActions() {
   switch (S.step) {
-    case 'review': return `<button class="btn" data-act="review-next">${S.ch === 'bank' ? 'Start suitability' : 'Continue to needs'} <i class="ph-bold ph-arrow-right"></i></button>`;
-    case 'needs': { const n = Object.keys(S.sale.answers).length; return `<button class="btn${n ? '' : ' secondary'}" data-act="compute"><i class="ph-bold ph-sparkle"></i> Get recommendations${n ? ` · ${n} answer${n > 1 ? 's' : ''}` : ''}</button>`; }
-    case 'computing': return `<p class="caption">Checking every product against ${esc(firstName(S.sale.customer.name))}'s answers…</p>`;
-    case 'recs': return ranked().length ? `<button class="btn" data-act="pitch"><i class="ph-bold ph-megaphone-simple"></i> Start pitching (${ranked().length})</button>` : `<button class="btn secondary" data-act="close-nofit">Close and log</button>`;
-    case 'pitch': return `<div class="two"><button class="btn secondary" data-act="notnow">Not now</button><button class="btn" data-act="yes"><i class="ph-bold ph-thumbs-up"></i> Interested</button></div>`;
+    case 'needs': { const n = Object.keys(S.sale.answers).length; return `<button class="btn${n ? '' : ' secondary'}" data-act="compute"><i class="ph-bold ph-sparkle"></i> Get recommendations${n ? ` · ${n} answered` : ''}</button>`; }
+    case 'computing': return `<p class="caption">Checking every product against the answers…</p>`;
+    case 'recs': {
+      const yes = ranked().filter(x => S.sale.responses[x.p.id] === 'interested'), tot = yes.reduce((n, x) => n + Math.round(x.p.price), 0);
+      return `<div class="two"><button class="btn secondary" data-act="quote-none">Nothing taken</button><button class="btn" data-act="quote" ${yes.length ? '' : 'disabled'}>${yes.length ? `Create quote · ${yes.length} · ${inr(tot)}` : 'Mark what interests them'}</button></div>`;
+    }
     case 'share': return `<div class="two"><button class="btn secondary" data-act="record-cur">Customer record</button><button class="btn" data-act="done">Done</button></div>`;
   }
   return '';
@@ -343,21 +327,18 @@ function jActions() {
 function recordPanel() {
   const s = S.sale && (getSale(S.sale.ref, S.ch) || S.sale);
   if (!s) return '';
-  const rs = s.responses || {};
-  const done = { Customer: (s.audit || []).some(e => e.stage === 'Customer'), Needs: !!s.questions, Recommendation: !!s.recommended,
-    Pitch: !!s.recommended?.length && Object.keys(rs).length >= s.recommended.length, Share: ['Quote shared', 'Viewed', 'Purchased'].includes(s.status), Purchase: s.status === 'Purchased' };
-  const L = { Customer: stageLabels().Customer, Needs: s.questions ? `${stageLabels().Needs} · ${s.questions.answered}/${s.questions.total}` : `${stageLabels().Needs} · ${Object.keys(s.answers || {}).length} answered`,
-    Recommendation: s.recommended ? `Recommended · ${s.recommended.length}` : 'Recommendation', Pitch: `Pitched · ${Object.values(rs).filter(v => v === 'interested').length} interested`,
+  const rs = S.sale.responses || s.responses || {};
+  const done = { Customer: true, Needs: Object.keys(S.sale.answers || {}).length > 0, Recommendation: !!s.recommended, Share: ['Quote shared', 'Viewed', 'Purchased'].includes(s.status), Purchase: s.status === 'Purchased' };
+  const L = { Customer: stageLabels().Customer, Needs: `${Object.keys(S.sale.answers || {}).length} answers`, Recommendation: s.recommended ? `${s.recommended.length} recommended · ${Object.values(rs).filter(v => v === 'interested').length} interested` : 'Recommendation',
     Share: 'Quote shared', Purchase: s.status === 'Purchased' ? `Bought · ${inr(s.quote.total)}` : 'Customer purchase' };
-  const ev = (s.audit || []).slice().sort((a, b) => b.at - a.at).slice(0, 10);
-  return `<div class="jr-h"><p class="eyebrow">Customer record</p><h3>${esc(s.customer.name)}</h3><p class="muted small">${esc(s.subject)} · <span class="mono">${esc(s.ref)}</span></p></div>
+  const ev = (S.sale.audit || s.audit || []).slice().sort((a, b) => b.at - a.at).slice(0, 8);
+  return `<div class="jr-h"><p class="eyebrow">Customer record</p><h3>${esc(s.customer.name)}</h3><p class="muted small"><span class="mono">${esc(s.ref)}</span> · logged on ${esc(C().agent.name)}</p></div>
     <ul class="stages">${Object.keys(done).map(k => `<li class="${done[k] ? 'ok' : ''}"><i class="ph-bold ${done[k] ? 'ph-check-circle' : 'ph-circle'}"></i>${esc(L[k])}</li>`).join('')}</ul>
-    <p class="eyebrow" style="margin:14px 0 6px">Audit trail · ${esc(label())}</p>
-    <ol class="feed">${ev.map(e => `<li><i class="ph-bold ${STAGE_ICON[e.stage] || 'ph-dot'}"></i><div><b>${esc(e.text)}</b>${e.detail ? `<small>${esc(e.detail)}</small>` : ''}<small>${esc(e.actor)} · ${esc(when(e.at))}</small></div></li>`).join('') || '<li class="muted small">Steps appear here as you go.</li>'}</ol>`;
+    <ol class="feed">${ev.map(e => `<li><i class="ph-bold ${STAGE_ICON[e.stage] || 'ph-dot'}"></i><div><b>${esc(e.text)}</b><small>${e.detail ? esc(e.detail) + ' · ' : ''}${esc(when(e.at))}</small></div></li>`).join('')}</ol>`;
 }
 function renderRecordPanel() { const el = $('#jrec'); if (el) el.innerHTML = recordPanel(); const m = $('#jrec-m-body'); if (m) m.innerHTML = recordPanel(); }
 function vJourney() {
-  const body = { review: jReview, needs: jNeeds, computing: jComputing, recs: jRecs, pitch: jPitch, share: jShare }[S.step]();
+  const body = { needs: jNeeds, computing: jComputing, recs: jRecs, share: jShare }[S.step]();
   return `${stepper()}<div class="jgrid"><section class="card jmain" data-step="${S.step}">${body}<div class="actions">${jActions()}</div></section>
     <aside class="card jrec" id="jrec">${recordPanel()}</aside>
     <details class="card jrec-m"><summary><i class="ph-bold ph-clipboard-text"></i> Customer record</summary><div id="jrec-m-body">${recordPanel()}</div></details></div>`;
@@ -385,6 +366,7 @@ function shell(body) {
 function render() {
   const root = $('#root');
   document.body.dataset.view = S.view;
+  document.body.dataset.symboMenuBottom = S.view === 'journey' && mobile() ? '84' : '';
   if (S.view === 'login' || !S.ch) { root.innerHTML = vLogin(); return; }
   const body = S.view === 'journey' ? vJourney() : S.view === 'records' ? vRecords() : S.view === 'record' ? vRecord() : (S.ch === 'bank' ? vHomeBank() : vHomeStore());
   root.innerHTML = shell(body);
@@ -392,7 +374,7 @@ function render() {
 
 /* ── events ─────────────────────────────── */
 document.addEventListener('click', async e => {
-  const t = e.target.closest('[data-act],[data-ans],[data-skip],[data-q],[data-record],[data-nav],[data-inv],[data-loan],[data-org],[data-filter]');
+  const t = e.target.closest('[data-act],[data-ans],[data-resp],[data-record],[data-nav],[data-inv],[data-loan],[data-org],[data-filter]');
   if (!t || t.closest('[aria-disabled="true"]')) return;
   const d = t.dataset;
   if (d.org) { S.loginOrg = d.org; return render(); }
@@ -402,18 +384,15 @@ document.addEventListener('click', async e => {
   if (d.record) { S.recordRef = d.record; S.sale = null; return go('record'); }
   if (d.filter) { S.filter = d.filter; return render(); }
   if (d.ans) return answer(d.qid, d.ans);
-  if (d.skip) return answer(d.skip, null);
-  if (d.q) { S.qi = Number(d.q); return render(); }
+  if (d.resp) return setResponse(d.id, d.resp);
   switch (d.act) {
     case 'nav': if (mobile()) S.navOpen = !S.navOpen; else S.collapsed = !S.collapsed; return render();
     case 'nav-close': S.navOpen = false; return render();
     case 'logout': return signOut();
-    case 'review-next': return submitReview();
+    case 'edit': if (S.editing) readCustomer(); S.editing = !S.editing; S.err = ''; return render();
     case 'compute': return compute();
-    case 'pitch': S.pi = 0; S.sale.responses = {}; return go('journey', 'pitch');
-    case 'yes': return respond('interested');
-    case 'notnow': return respond('not_now');
-    case 'close-nofit': S.sale.status = 'No fit'; log(S.sale, label(), 'Pitch', 'No suitable product; nothing pitched'); persist(); S.sale = null; return go('home');
+    case 'quote': return createQuote();
+    case 'quote-none': return createQuote(S.sale.responses = {});
     case 'done': S.sale = null; return go('home');
     case 'record-cur': S.recordRef = S.sale.ref; S.sale = null; return go('record');
     case 'wa': markShared('WhatsApp'); window.open('https://wa.me/?text=' + encodeURIComponent(waMessage(S.sale)), '_blank', 'noopener'); return;

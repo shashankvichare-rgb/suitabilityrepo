@@ -1095,7 +1095,7 @@ a:hover{color:#00c98f}
           <div style="padding:20px 18px 18px;display:flex;flex-direction:column;gap:6px;font-size:13px">
             <div style="color:#ffffff;padding:0 8px 10px"><span style="color:#00c98f">$</span> symbo demos list --all</div>
             <div style="display:grid;grid-template-columns:32px minmax(0,1fr) 84px 60px;gap:12px;padding:6px 8px;font-size:11px;letter-spacing:.12em;color:rgba(255,255,255,.45);border-bottom:1px dashed rgba(255,255,255,.12)"><span>ID</span><span>DEMO</span><span>TYPE</span><span>STATUS</span></div>
-            <sc-for list="{{ registry }}" as="r" hint-placeholder-count="6">
+            <sc-for list="{{ registry }}" as="r" hint-placeholder-count="5">
               <a href="{{ r.url }}" style="display:grid;grid-template-columns:32px minmax(0,1fr) 84px 60px;gap:12px;align-items:center;padding:9px 8px;border-radius:6px;color:#ffffff;transition:opacity .4s ease,transform .4s ease,background .2s ease;opacity:{{ r.op }};transform:{{ r.tf }}" style-hover="background:rgba(0,201,143,.1);color:#ffffff">
                 <span style="color:rgba(255,255,255,.5)">{{ r.id }}</span>
                 <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.slug }}</span>
@@ -1131,12 +1131,44 @@ a:hover{color:#00c98f}
         </div>
       </div>
 
+      <sc-if value="{{ showEngine }}" hint-placeholder-val="{{ true }}">
+      <a href="{{ suitabilityUrl }}" data-screen-label="01 Suitability in action" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));background:#011a14;border:1px solid #011a14;border-radius:16px;overflow:hidden;color:#ffffff;transition:transform .3s ease,box-shadow .3s ease" style-hover="transform:translateY(-4px);box-shadow:0 20px 40px -12px rgba(0,201,143,.4);color:#ffffff">
+        <div style="padding:44px 40px;display:flex;flex-direction:column;gap:18px;justify-content:space-between">
+          <div style="display:flex;flex-direction:column;gap:18px">
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#00c98f">01 / Suitability in action</span>
+              <span style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#011a14;background:#00c98f;padding:4px 10px;border-radius:9999px">Start here</span>
+              <span style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.75);border:1px solid rgba(255,255,255,.25);padding:3px 9px;border-radius:9999px">Desktop</span>
+            </div>
+            <h3 style="margin:0;font-family:'Inter Tight',sans-serif;font-weight:500;font-size:clamp(28px,3.2vw,40px);letter-spacing:-.025em;color:#ffffff;line-height:1.1">The engine behind every journey.</h3>
+            <p style="margin:0;font-size:16px;line-height:1.65;color:rgba(255,255,255,.75);max-width:440px;text-wrap:pretty">Watch it read 40+ signals, check all 91 products and return the few that fit, with the reason and the audit trail for each.</p>
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+              <span style="font-size:13px;color:rgba(255,255,255,.85);background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);padding:6px 12px;border-radius:9999px">11 partner types</span>
+              <span style="font-size:13px;color:rgba(255,255,255,.85);background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);padding:6px 12px;border-radius:9999px">196 services</span>
+              <span style="font-size:13px;color:rgba(255,255,255,.85);background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);padding:6px 12px;border-radius:9999px">RBI and IRDAI markers</span>
+            </div>
+          </div>
+          <span style="align-self:flex-start;font-family:'Inter Tight',sans-serif;font-size:15px;font-weight:600;color:#011a14;background:#00c98f;padding:14px 22px;border-radius:8px;display:flex;align-items:center;gap:8px;margin-top:12px">See the engine work <i class="ph-bold ph-arrow-up-right"></i></span>
+        </div>
+        <div style="position:relative;background:#06271f;min-height:340px;display:flex;flex-direction:column;justify-content:center;gap:14px;padding:40px 36px;overflow:hidden">
+          <div style="position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.07) 1px,transparent 1px);background-size:16px 16px"></div>
+          <sc-for list="{{ engineStages }}" as="e" hint-placeholder-count="5">
+            <div style="position:relative;display:grid;grid-template-columns:104px 1fr 34px;gap:14px;align-items:center;transition:opacity .45s ease;opacity:{{ e.op }}">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-size:11px;color:rgba(255,255,255,.7)">{{ e.label }}</span>
+              <div style="height:10px;border-radius:9999px;background:rgba(255,255,255,.1)"><div style="height:100%;border-radius:9999px;background:linear-gradient(90deg,#00d182 25%,#fdd340 84%);transition:width .6s cubic-bezier(.65,0,.35,1);width:{{ e.w }}"></div></div>
+              <span style="font-family:'Inter Tight',sans-serif;font-size:18px;font-weight:600;color:#ffffff;text-align:right">{{ e.n }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </a>
+
+      </sc-if>
       <sc-if value="{{ showWidget }}" hint-placeholder-val="{{ true }}">
       <a href="{{ widgetUrl }}" data-screen-label="01 Embedded widget" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));background:#ffffff;border:1px solid #eaeaea;border-radius:16px;overflow:hidden;color:#1b1c1c;transition:transform .3s ease,box-shadow .3s ease,border-color .3s ease" style-hover="transform:translateY(-4px);box-shadow:0 8px 10px -6px rgba(27,28,28,.1),0 20px 25px -5px rgba(27,28,28,.1);border-color:#00c98f;color:#1b1c1c">
         <div style="padding:44px 40px;display:flex;flex-direction:column;gap:18px;justify-content:space-between">
           <div style="display:flex;flex-direction:column;gap:18px">
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-              <span style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.14em;color:#006d41;text-transform:uppercase">01 / Embedded widget</span>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.14em;color:#006d41;text-transform:uppercase">02 / Embedded widget journey</span>
               <span style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#004a2e;background:#ccf6e6;padding:4px 10px;border-radius:9999px"><span style="width:6px;height:6px;border-radius:50%;background:#00c98f;animation:sbBlink 1.4s infinite"></span>Live</span>
             </div>
             <h3 style="margin:0;font-family:'Inter Tight',sans-serif;font-weight:500;font-size:clamp(28px,3.2vw,40px);letter-spacing:-.025em;color:#013a51;line-height:1.1">Cover, right at checkout.</h3>
@@ -1147,7 +1179,7 @@ a:hover{color:#00c98f}
               <span style="font-size:13px;color:#3c4a40;background:#f8f9fa;border:1px solid #eaeaea;padding:6px 12px;border-radius:9999px">Instant COI</span>
             </div>
           </div>
-          <span style="align-self:flex-start;font-family:'Inter Tight',sans-serif;font-size:15px;font-weight:600;color:#ffffff;background:linear-gradient(180deg,#006d41 0%,#00d182 100%);padding:14px 22px;border-radius:8px;display:flex;align-items:center;gap:8px;box-shadow:0 12px 30px -10px rgba(0,209,130,.45);margin-top:12px">Open widget demo <i class="ph-bold ph-arrow-up-right"></i></span>
+          <span style="align-self:flex-start;font-family:'Inter Tight',sans-serif;font-size:15px;font-weight:600;color:#ffffff;background:linear-gradient(180deg,#006d41 0%,#00d182 100%);padding:14px 22px;border-radius:8px;display:flex;align-items:center;gap:8px;box-shadow:0 12px 30px -10px rgba(0,209,130,.45);margin-top:12px">Open widget journey <i class="ph-bold ph-arrow-up-right"></i></span>
         </div>
         <div style="position:relative;background:#011a14;min-height:380px;display:flex;align-items:center;justify-content:center;padding:40px 28px;overflow:hidden">
           <div style="position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.07) 1px,transparent 1px);background-size:16px 16px"></div>
@@ -1189,47 +1221,30 @@ a:hover{color:#00c98f}
 
       </sc-if>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:24px">
-        <sc-if value="{{ showAgent }}" hint-placeholder-val="{{ true }}">
-        <a href="{{ agentUrl }}" data-screen-label="02 Agent journey" style="display:flex;flex-direction:column;background:#ffffff;border:1px solid #eaeaea;border-radius:16px;overflow:hidden;color:#1b1c1c;transition:transform .3s ease,box-shadow .3s ease,border-color .3s ease" style-hover="transform:translateY(-4px);box-shadow:0 8px 10px -6px rgba(27,28,28,.1),0 20px 25px -5px rgba(27,28,28,.1);border-color:#00c98f;color:#1b1c1c">
-          <div style="background:#f6f3f2;padding:28px;display:flex;flex-direction:column;gap:6px;min-height:248px;border-bottom:1px solid #eaeaea">
-            <sc-for list="{{ steps }}" as="s" hint-placeholder-count="6">
-              <div style="display:flex;align-items:center;gap:12px;padding:7px 12px;border-radius:8px;background:{{ s.bg }};transition:background .35s ease">
-                <div style="width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;background:{{ s.dotBg }};color:{{ s.dotFg }};border:1px solid {{ s.dotBorder }};transition:all .35s ease"><i class="{{ s.icon }}"></i></div>
-                <span style="flex:1;font-size:13px;font-weight:{{ s.weight }};color:{{ s.fg }}">{{ s.label }}</span>
-                <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#4f4f4f">{{ s.meta }}</span>
-              </div>
-            </sc-for>
-          </div>
-          <div style="padding:32px;display:flex;flex-direction:column;gap:14px;flex:1">
-            <span style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.14em;color:#006d41;text-transform:uppercase">02 / Credit Life journey</span>
-            <h3 style="margin:0;font-family:'Inter Tight',sans-serif;font-weight:500;font-size:28px;letter-spacing:-.02em;color:#013a51">Credit Life, sold suitably</h3>
-            <p style="margin:0;font-size:15px;line-height:1.65;color:#3c4a40;text-wrap:pretty">A loan agent checks need, eligibility and price for Credit Life. The borrower consents on their own phone, and the membership form fills itself.</p>
-            <span style="margin-top:auto;padding-top:12px;font-family:'Inter Tight',sans-serif;font-size:15px;font-weight:600;color:#006d41;display:flex;align-items:center;gap:8px">Open agent journey <i class="ph-bold ph-arrow-up-right"></i></span>
-          </div>
-        </a>
-
-        </sc-if>
-        <sc-if value="{{ showEngine }}" hint-placeholder-val="{{ true }}">
-        <a href="{{ suitabilityUrl }}" data-screen-label="03 Suitability" style="display:flex;flex-direction:column;background:#ffffff;border:1px solid #eaeaea;border-radius:16px;overflow:hidden;color:#1b1c1c;transition:transform .3s ease,box-shadow .3s ease,border-color .3s ease" style-hover="transform:translateY(-4px);box-shadow:0 8px 10px -6px rgba(27,28,28,.1),0 20px 25px -5px rgba(27,28,28,.1);border-color:#00c98f;color:#1b1c1c">
-          <div style="background:#f6f3f2;padding:28px;display:flex;flex-direction:column;gap:16px;min-height:248px;border-bottom:1px solid #eaeaea">
-            <sc-for list="{{ signals }}" as="g" hint-placeholder-count="3">
-              <div style="display:flex;flex-direction:column;gap:6px">
-                <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:#3c4a40;font-weight:500">{{ g.label }}</span><span style="font-family:'JetBrains Mono',monospace;color:#1b1c1c">{{ g.value }}</span></div>
-                <div style="height:6px;border-radius:9999px;background:#e4e2e1;position:relative">
-                  <div style="position:absolute;left:0;top:0;bottom:0;border-radius:9999px;background:#00c98f;transition:width .8s cubic-bezier(.65,0,.35,1);width:{{ g.w }}"></div>
-                </div>
-              </div>
-            </sc-for>
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:#ffffff;border:1px solid #eaeaea;border-radius:12px;padding:12px 14px;margin-top:4px">
-              <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#4f4f4f;font-weight:600">Recommended</span><span style="font-family:'Inter Tight',sans-serif;font-size:15px;font-weight:600;color:#013a51">{{ recPlan }}</span></div>
-              <span style="font-size:12px;font-weight:600;color:#004a2e;background:#ccf6e6;padding:5px 10px;border-radius:9999px">{{ recFit }}</span>
+        <sc-if value="{{ showJourney }}" hint-placeholder-val="{{ true }}">
+        <a href="{{ journeyUrl }}" data-screen-label="06 Agent journey" style="display:flex;flex-direction:column;background:#ffffff;border:1px solid #eaeaea;border-radius:16px;overflow:hidden;color:#1b1c1c;transition:transform .3s ease,box-shadow .3s ease,border-color .3s ease" style-hover="transform:translateY(-4px);box-shadow:0 8px 10px -6px rgba(27,28,28,.1),0 20px 25px -5px rgba(27,28,28,.1);border-color:#00c98f;color:#1b1c1c">
+          <div style="background:#f6f3f2;padding:28px;display:flex;flex-direction:column;gap:10px;min-height:248px;border-bottom:1px solid #eaeaea">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+              <div style="display:flex;align-items:center;gap:10px"><span style="width:32px;height:32px;border-radius:50%;background:linear-gradient(180deg,#006d41 0%,#00d182 100%);color:#ffffff;display:flex;align-items:center;justify-content:center;font-family:'Inter Tight',sans-serif;font-weight:700;font-size:14px">R</span><div style="display:flex;flex-direction:column;gap:1px"><span style="font-size:13px;font-weight:600;color:#1b1c1c">Rohan · for Amit Verma</span><span style="font-size:11px;color:#4f4f4f">LED TV · ₹64,990 on EMI</span></div></div>
+              <span style="font-size:11px;font-weight:600;color:#004a2e;background:#ccf6e6;padding:4px 9px;border-radius:9999px">3 fit</span>
             </div>
+            <sc-for list="{{ journeyRecs }}" as="j" hint-placeholder-count="3">
+              <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:10px;background:#ffffff;border:1px solid #eaeaea;transition:opacity .45s ease,transform .45s cubic-bezier(.2,.9,.3,1.2);opacity:{{ j.op }};transform:{{ j.tf }}">
+                <i class="ph-bold ph-check-circle" style="color:#00c98f;font-size:16px"></i>
+                <span style="flex:1;font-size:13px;font-weight:500;color:#1b1c1c">{{ j.name }}</span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#4f4f4f">{{ j.price }}</span>
+              </div>
+            </sc-for>
+            <div style="margin-top:auto;display:flex;align-items:center;gap:8px;align-self:flex-start;font-size:12px;font-weight:600;color:#ffffff;background:#25d366;padding:6px 12px;border-radius:9999px;transition:opacity .4s ease;opacity:{{ journeyWa }}"><i class="ph-bold ph-share-network"></i>Quote shared on WhatsApp</div>
           </div>
           <div style="padding:32px;display:flex;flex-direction:column;gap:14px;flex:1">
-            <span style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.14em;color:#006d41;text-transform:uppercase">03 / Suitability engine</span>
-            <h3 style="margin:0;font-family:'Inter Tight',sans-serif;font-weight:500;font-size:28px;letter-spacing:-.02em;color:#013a51">Suitability, explained</h3>
-            <p style="margin:0;font-size:15px;line-height:1.65;color:#3c4a40;text-wrap:pretty">Change customer signals and see how recommendations, disclosures and the decision record respond.</p>
-            <span style="margin-top:auto;padding-top:12px;font-family:'Inter Tight',sans-serif;font-size:15px;font-weight:600;color:#006d41;display:flex;align-items:center;gap:8px">Open engine demo <i class="ph-bold ph-arrow-up-right"></i></span>
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.14em;color:#006d41;text-transform:uppercase">03 / Agent journey</span>
+              <span style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#1b1c1c;background:#fdd340;padding:3px 9px;border-radius:9999px">New</span>
+            </div>
+            <h3 style="margin:0;font-family:'Inter Tight',sans-serif;font-weight:500;font-size:28px;letter-spacing:-.02em;color:#013a51">An agent, enabled to sell</h3>
+            <p style="margin:0;font-size:15px;line-height:1.65;color:#3c4a40;text-wrap:pretty">Agent portals for a store and a bank. Pick a customer or a sanctioned loan, ask the suitability questions, pitch ranked cover with a script, and share a WhatsApp quote the customer buys from.</p>
+            <span style="margin-top:auto;padding-top:12px;font-family:'Inter Tight',sans-serif;font-size:15px;font-weight:600;color:#006d41;display:flex;align-items:center;gap:8px">Open agent journey <i class="ph-bold ph-arrow-up-right"></i></span>
           </div>
         </a>
         </sc-if>
@@ -1256,7 +1271,7 @@ a:hover{color:#00c98f}
           </div>
           <div style="padding:32px;display:flex;flex-direction:column;gap:14px;flex:1">
             <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-              <span style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.14em;color:#006d41;text-transform:uppercase">04 / Motor agent</span>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.14em;color:#006d41;text-transform:uppercase">04 / Motor agent journey</span>
               <span style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#1b1c1c;background:#fdd340;padding:3px 9px;border-radius:9999px">New</span>
             </div>
             <h3 style="margin:0;font-family:'Inter Tight',sans-serif;font-weight:500;font-size:28px;letter-spacing:-.02em;color:#013a51">Motor cover, quoted in minutes</h3>
@@ -1293,7 +1308,7 @@ a:hover{color:#00c98f}
           </div>
           <div style="padding:32px;display:flex;flex-direction:column;gap:14px;flex:1">
             <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-              <span style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.14em;color:#006d41;text-transform:uppercase">05 / Pet insurance</span>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.14em;color:#006d41;text-transform:uppercase">05 / Pet insurance journey</span>
               <span style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#1b1c1c;background:#fdd340;padding:3px 9px;border-radius:9999px">New</span>
             </div>
             <h3 style="margin:0;font-family:'Inter Tight',sans-serif;font-weight:500;font-size:28px;letter-spacing:-.02em;color:#013a51">Pet cover, landing to policy</h3>
@@ -1302,39 +1317,12 @@ a:hover{color:#00c98f}
           </div>
         </a>
         </sc-if>
-        <sc-if value="{{ showJourney }}" hint-placeholder-val="{{ true }}">
-        <a href="{{ journeyUrl }}" data-screen-label="06 Agent journey" style="display:flex;flex-direction:column;background:#ffffff;border:1px solid #eaeaea;border-radius:16px;overflow:hidden;color:#1b1c1c;transition:transform .3s ease,box-shadow .3s ease,border-color .3s ease" style-hover="transform:translateY(-4px);box-shadow:0 8px 10px -6px rgba(27,28,28,.1),0 20px 25px -5px rgba(27,28,28,.1);border-color:#00c98f;color:#1b1c1c">
-          <div style="background:#f6f3f2;padding:28px;display:flex;flex-direction:column;gap:10px;min-height:248px;border-bottom:1px solid #eaeaea">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
-              <div style="display:flex;align-items:center;gap:10px"><span style="width:32px;height:32px;border-radius:50%;background:linear-gradient(180deg,#006d41 0%,#00d182 100%);color:#ffffff;display:flex;align-items:center;justify-content:center;font-family:'Inter Tight',sans-serif;font-weight:700;font-size:14px">R</span><div style="display:flex;flex-direction:column;gap:1px"><span style="font-size:13px;font-weight:600;color:#1b1c1c">Rohan · for Amit Verma</span><span style="font-size:11px;color:#4f4f4f">LED TV · ₹64,990 on EMI</span></div></div>
-              <span style="font-size:11px;font-weight:600;color:#004a2e;background:#ccf6e6;padding:4px 9px;border-radius:9999px">3 fit</span>
-            </div>
-            <sc-for list="{{ journeyRecs }}" as="j" hint-placeholder-count="3">
-              <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:10px;background:#ffffff;border:1px solid #eaeaea;transition:opacity .45s ease,transform .45s cubic-bezier(.2,.9,.3,1.2);opacity:{{ j.op }};transform:{{ j.tf }}">
-                <i class="ph-bold ph-check-circle" style="color:#00c98f;font-size:16px"></i>
-                <span style="flex:1;font-size:13px;font-weight:500;color:#1b1c1c">{{ j.name }}</span>
-                <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#4f4f4f">{{ j.price }}</span>
-              </div>
-            </sc-for>
-            <div style="margin-top:auto;display:flex;align-items:center;gap:8px;align-self:flex-start;font-size:12px;font-weight:600;color:#ffffff;background:#25d366;padding:6px 12px;border-radius:9999px;transition:opacity .4s ease;opacity:{{ journeyWa }}"><i class="ph-bold ph-share-network"></i>Quote shared on WhatsApp</div>
-          </div>
-          <div style="padding:32px;display:flex;flex-direction:column;gap:14px;flex:1">
-            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-              <span style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.14em;color:#006d41;text-transform:uppercase">06 / Agent journey</span>
-              <span style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#1b1c1c;background:#fdd340;padding:3px 9px;border-radius:9999px">New</span>
-            </div>
-            <h3 style="margin:0;font-family:'Inter Tight',sans-serif;font-weight:500;font-size:28px;letter-spacing:-.02em;color:#013a51">An agent, enabled to sell</h3>
-            <p style="margin:0;font-size:15px;line-height:1.65;color:#3c4a40;text-wrap:pretty">Agent portals for a store and a bank. Pick a customer or a sanctioned loan, ask the suitability questions, pitch ranked cover with a script, and share a WhatsApp quote the customer buys from.</p>
-            <span style="margin-top:auto;padding-top:12px;font-family:'Inter Tight',sans-serif;font-size:15px;font-weight:600;color:#006d41;display:flex;align-items:center;gap:8px">Open agent journey <i class="ph-bold ph-arrow-up-right"></i></span>
-          </div>
-        </a>
-        </sc-if>
         <div style="grid-column:1/-1;border:1.5px dashed #d4d4d4;border-radius:16px;padding:24px 28px;display:flex;flex-wrap:wrap;align-items:center;gap:16px;justify-content:space-between">
           <div style="display:flex;align-items:center;gap:16px">
             <div style="width:44px;height:44px;border-radius:12px;background:#ffffff;border:1px solid #eaeaea;color:#006d41;display:flex;align-items:center;justify-content:center;font-size:22px"><i class="ph-bold ph-plus"></i></div>
             <div style="display:flex;flex-direction:column;gap:2px"><span style="font-family:'Inter Tight',sans-serif;font-size:16px;font-weight:600;color:#013a51">Next demo in the pipeline</span><span style="font-size:14px;color:#4f4f4f">New Symbo journeys are added to this library as they ship.</span></div>
           </div>
-          <span style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.14em;color:#4f4f4f">07 / —</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.14em;color:#4f4f4f">06 / —</span>
         </div>
       </div>
     </div>
@@ -1352,7 +1340,7 @@ a:hover{color:#00c98f}
 class Component extends DCLogic {
   state = { pct: 0, phase: 'load', tick: 0, filter: 'All', rev: 0, now: new Date() };
   startReveal() {
-    this.rv = setInterval(() => this.setState(s => { if (s.rev >= 6) clearInterval(this.rv); return { rev: s.rev + 1 }; }), 220);
+    this.rv = setInterval(() => this.setState(s => { if (s.rev >= 5) clearInterval(this.rv); return { rev: s.rev + 1 }; }), 220);
   }
   componentDidMount() {
     const show = this.props.showLoader ?? true;
@@ -1382,21 +1370,22 @@ class Component extends DCLogic {
       j: this.props.journeyUrl ?? '/demos/agent-journey/'
     };
     const regDefs = [
-      ['01', 'embedded-widget', 'Embedded', 'LIVE', urls.w], ['02', 'credit-life-journey', 'Agent', 'NEW', urls.a],
-      ['03', 'suitability-engine', 'Engine', 'LIVE', urls.s], ['04', 'motor-agent', 'Agent', 'NEW', urls.m],
-      ['05', 'pet-insurance', 'Embedded', 'NEW', urls.p],
-      ['06', 'agent-journey', 'Agent', 'NEW', urls.j]
+      ['01', 'suitability-in-action', 'Engine', 'LIVE', urls.s], ['02', 'embedded-widget-journey', 'Embedded', 'LIVE', urls.w],
+      ['03', 'agent-journey', 'Agent', 'NEW', urls.j], ['04', 'motor-agent-journey', 'Agent', 'LIVE', urls.m],
+      ['05', 'pet-insurance-journey', 'Embedded', 'LIVE', urls.p]
     ];
     const registry = regDefs.map(([id, slug, type, status, url], i) => ({
       id, slug, type, status, url, sc: status === 'NEW' ? '#fdd340' : '#00c98f',
       op: rev > i ? 1 : 0, tf: rev > i ? 'none' : 'translateX(-8px)'
     }));
-    const counts = { All: 6, Embedded: 2, Agent: 3, Engine: 1 };
+    const counts = { All: 5, Engine: 1, Embedded: 2, Agent: 2 };
     const filters = Object.keys(counts).map(label => {
       const on = label === filter;
       return { label, count: String(counts[label]).padStart(2, '0'), pick: () => this.setState({ filter: label }),
         bg: on ? '#013a51' : '#ffffff', fg: on ? '#ffffff' : '#3c4a40', border: on ? '#013a51' : '#eaeaea' };
     });
+    const et = tick % 7;
+    const engineStages = [['Products', 91], ['Mapped', 35], ['Eligible', 18], ['Fit', 8], ['Recommended', 3]].map(([label, n], i) => ({ label, n, w: Math.max(5, Math.round(n / 91 * 100)) + '%', op: et >= i ? 1 : .2 }));
     const jt = tick % 6;
     const journeyRecs = [['Extended Warranty', '₹1,592'], ['Hospital Cash & EMI', '₹999'], ['Home & Digital Assist', '₹1,199']].map(([name, price], i) => ({ name, price, op: i < jt ? 1 : 0, tf: i < jt ? 'none' : 'translateY(8px)' }));
     const pt = tick % 7;
@@ -1453,14 +1442,14 @@ class Component extends DCLogic {
       loaderOn: phase !== 'done',
       loaderTransform: phase === 'exit' ? 'translateY(-100%)' : 'translateY(0)',
       loaderLabel: labels[Math.min(4, Math.floor(pct / 21))],
-      registry, regFooter: '6 demos indexed · more shipping', clock, filters, motorAddons, motorPremium,
+      registry, regFooter: '5 demos indexed · more shipping', clock, filters, motorAddons, motorPremium,
       showWidget: filter === 'All' || filter === 'Embedded',
       showAgent: filter === 'All' || filter === 'Agent',
       showMotor: filter === 'All' || filter === 'Agent',
       showEngine: filter === 'All' || filter === 'Engine',
       showJourney: filter === 'All' || filter === 'Agent',
       showPet: filter === 'All' || filter === 'Embedded',
-      motorUrl: urls.m, petUrl: urls.p, petSteps, journeyUrl: urls.j, journeyRecs, journeyWa: jt >= 4 ? 1 : 0,
+      motorUrl: urls.m, petUrl: urls.p, petSteps, journeyUrl: urls.j, engineStages, journeyRecs, journeyWa: jt >= 4 ? 1 : 0,
       pct: String(pct).padStart(2, '0'),
       heroOpacity: revealed ? 1 : 0,
       heroTransform: revealed ? 'none' : 'translateY(24px)',

@@ -1,6 +1,7 @@
 /* Customer buy page · uses the tokens and components in style.css */
 body.buy { background: var(--warm); min-height: 100vh; }
 .eyebrow.light { color: rgba(255,255,255,.6); }
+.insured-by { display: flex; justify-content: center; align-items: center; gap: 6px; margin-bottom: 8px; font-size: 11.5px; } .insured-by img { height: 24px; border-radius: 5px; }
 .shell { max-width: 480px; margin: 0 auto; min-height: 100vh; background: #fff; display: flex; flex-direction: column; box-shadow: 0 0 0 1px var(--line); }
 .b-top { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: #fff; z-index: 5; }
 .lb { display: flex; align-items: center; gap: 9px; font: 700 16px var(--fd); color: #141414; min-width: 0; }

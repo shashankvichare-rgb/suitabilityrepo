@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<!--
+  LoanBee checkout x Symbo embedded protection demo.
+  Static HTML and JavaScript; Symbo suitability rules and reference rate-card
+  data are loaded from sibling files. No build step or backend is required.
+
+  WHERE TO WIRE REAL LOGIC
+  1. loanbee-engine.js maps the LoanBee fields to the existing Symbo rules.
+  2. config.js, source-data.js and engine.js supply the actual demo catalogue,
+     suitability scores and reference prices used by the original engine demo.
+  3. A production integration would replace browser calculation and event logs
+     with authenticated server decisions, live quotes and durable audit records.
+  4. Stable hooks: window.LoanBeeDemo.setProfile(patch), window.LoanBeeDemo.renderResult(result),
+     plus getProfile(), getResult(), getEvidence(), loadPreset(id).
+
+  RULES THE UI ENFORCES (keep them when adding logic)
+  - Nothing is pre-selected. Each item needs its own "I agree, add" tap in the consent sheet.
+  - A material quote change clears all consents and shows the review notice.
+  - Value-adds have one optional bundle fee tied to the selected primary
+    insurance rate-card row. There is no invented per-service price.
+  - Policy term is shown separately from loan tenure.
+
+  SELECTORS
+  [data-field] profile inputs · [data-product-id] / [data-vas-id] rows · [data-si-selector]
+  [data-totals] [data-total] · [data-consent] consent controls · [data-decision] record
+  [data-evidence] [data-ev] evidence · [data-what-changed] [data-wc] outcome panel
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LoanBee checkout · Symbo embedded protection demo</title>
+<!-- Symbo Design System 2: tokens, type and bundle -->
+<style id="symbo-ds-tokens">
+/* ─────────────────────────────────────────────
+   Symbo Design System — Colors & Type Tokens
+   Brand: #00c98f (Symbo Green) · #013a51 (Deep Blue)
+   Family: Inter Tight (display/UI) · Inter (body/labels)
+   ───────────────────────────────────────────── */
+
+/* Brand fonts — real families (Inter Tight, Inter, JetBrains Mono).
+   Served from Google Fonts until the user uploads self-hosted files;
+   these are the actual specified families, NOT substitutes. */
+@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  /* ── Brand colors ─────────────────────────── */
+  --symbo-green:        #00c98f;  /* Primary brand green (logo) */
+  --symbo-green-bright: #00d182;  /* Bright accent — gradients, hover */
+  --symbo-green-mid:    #1fc98b;  /* Subtle differentiator */
+  --symbo-green-dark:   #006d41;  /* Deep brand green — gradient base */
+  --symbo-green-deep:   #004a2e;  /* Text on green tints */
+  --symbo-blue:         #013a51;  /* Deep blue — secondary brand */
+  --symbo-blue-soft:    #d6e9ff;  /* Blue-tinted surface (used sparingly) */
+
+  /* Tints (used on light surfaces for chips/icon backings) */
+  --green-tint-08:      rgba(0, 209, 130, 0.08);
+  --green-tint-12:      rgba(0, 209, 130, 0.12);
+  --green-tint-20:      rgba(0, 209, 130, 0.20);
+  --green-tint-soft:    #ccf6e6;  /* solid pale green for icon backings */
+
+  /* ── Accent colors ────────────────────────── */
+  --accent-yellow:      #fdd340;  /* Highlight accent (gradient bar) */
+  --accent-yellow-warm: #fbd22b;
+  --accent-yellow-tint: #ffeda9;  /* Solid pale yellow */
+  --accent-amber-deep:  #715b00;  /* Text on yellow tints */
+  --accent-coral:       #ff7c7c;  /* Status — pending/alert */
+
+  /* ── Neutrals (dark) ──────────────────────── */
+  --ink:                #1b1c1c;  /* Primary text */
+  --ink-near-black:     #141414;  /* Dark surface / hero bg */
+  --ink-2:              #2e2e2e;
+  --gray-700:           #3c4a40;  /* Muted body text (warm gray) */
+  --gray-500:           #4f4f4f;  /* Secondary UI gray */
+
+  /* ── Neutrals (light) ─────────────────────── */
+  --border:             #bacbbd;  /* Sage-tinted border (brand) */
+  --border-soft:        rgba(186,203,189,0.30);
+  --border-faint:       rgba(186,203,189,0.20);
+  --border-line:        #e4e2e1;  /* Hairline dividers */
+  --surface:            #f6f3f2;  /* Off-white card surface (warm) */
+  --surface-2:          #fcf9f8;  /* Even lighter */
+  --white:              #ffffff;
+
+  /* ── Semantic foreground ──────────────────── */
+  --fg-1:               var(--ink);
+  --fg-2:               var(--gray-700);
+  --fg-3:               var(--gray-500);
+  --fg-on-dark:         #ffffff;
+  --fg-on-dark-2:       rgba(255,255,255,0.75);
+  --fg-on-dark-3:       rgba(255,255,255,0.55);
+  --fg-accent:          var(--symbo-green);
+  --fg-link:            var(--symbo-green);
+
+  /* ── Semantic backgrounds ─────────────────── */
+  --bg-page:            #ffffff;
+  --bg-page-warm:       var(--surface);
+  --bg-hero-dark:       var(--ink-near-black);
+  --bg-card:            #ffffff;
+  --bg-card-warm:       var(--surface);
+
+  /* ── Gradients (signature) ────────────────── */
+  --grad-cta:           linear-gradient(180deg, var(--symbo-green-dark) 0%, var(--symbo-green-bright) 100%);
+  --grad-cta-h:         linear-gradient(90deg,  var(--symbo-green-dark) 0%, var(--symbo-green-bright) 100%);
+  --grad-bottom-bar:    linear-gradient(90deg,  var(--symbo-green-bright) 25%, var(--accent-yellow) 84%);
+  --grad-top-bar:       linear-gradient(180deg, var(--symbo-green-bright) 0%, var(--accent-yellow) 100%);
+  --grad-glow-green:    radial-gradient(closest-side, var(--green-tint-12) 0%, rgba(0,209,130,0) 70%);
+  --grad-glow-soft:     radial-gradient(closest-side, var(--green-tint-08) 0%, rgba(0,209,130,0) 70%);
+  --grad-deco-light:    linear-gradient(180deg, rgba(31,201,139,0.10) 0%, rgba(253,210,45,0.10) 100%); /* @kind color */
+
+  /* ── Radii ────────────────────────────────── */
+  --r-xs:  4px;
+  --r-sm:  6px;
+  --r-md:  8px;
+  --r-lg:  12px;
+  --r-xl:  16px;
+  --r-2xl: 24px;
+  --r-pill: 9999px;
+
+  /* ── Shadows ──────────────────────────────── */
+  --shadow-xs:   0 1px 2px rgba(27,28,28,0.05);
+  --shadow-sm:   0 1px 2px rgba(27,28,28,0.05), 0 2px 4px rgba(27,28,28,0.02);
+  --shadow-md:   0 4px 6px -2px rgba(27,28,28,0.05), 0 10px 15px -3px rgba(27,28,28,0.08);
+  --shadow-lg:   0 8px 10px -6px rgba(27,28,28,0.10), 0 20px 25px -5px rgba(27,28,28,0.10);
+  --shadow-cta:  0 12px 30px -10px rgba(0,209,130,0.45);
+  --shadow-inner-border: inset 0 0 0 1px var(--border-soft);
+
+  /* ── Spacing (8-pt grid) ──────────────────── */
+  --sp-0:  0px;
+  --sp-1:  4px;
+  --sp-2:  8px;
+  --sp-3:  12px;
+  --sp-4:  16px;
+  --sp-5:  20px;
+  --sp-6:  24px;
+  --sp-8:  32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+  --sp-16: 64px;
+  --sp-20: 80px;
+
+  /* ── Typography families ──────────────────── */
+  --font-display: 'Inter Tight', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-body:    'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono:    ui-monospace, 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+
+  /* ── Type scale (used at 1x — slides scale 2x) ── */
+  --t-display:  52px;  /* Hero on landing */
+  --t-h1:       38px;
+  --t-h2:       28px;
+  --t-h3:       22px;
+  --t-h4:       18px;
+  --t-body-lg:  18px;
+  --t-body:     15px;
+  --t-body-sm:  13px;
+  --t-label:    14px;
+  --t-caption:  11px;
+  --t-overline: 10px;
+}
+
+/* ─── Semantic typography classes ──────────── */
+
+.display, h1.display {
+  font-family: var(--font-display);
+  font-size: var(--t-display);
+  font-weight: 500;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  color: var(--fg-1);
+}
+
+h1, .h1 {
+  font-family: var(--font-display);
+  font-size: var(--t-h1);
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--fg-1);
+}
+h2, .h2 {
+  font-family: var(--font-display);
+  font-size: var(--t-h2);
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: var(--fg-1);
+}
+h3, .h3 {
+  font-family: var(--font-display);
+  font-size: var(--t-h3);
+  font-weight: 500;
+  line-height: 1.25;
+  letter-spacing: -0.025em;
+  color: var(--fg-1);
+}
+h4, .h4 {
+  font-family: var(--font-display);
+  font-size: var(--t-h4);
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--fg-1);
+}
+
+p, .body {
+  font-family: var(--font-display);
+  font-size: var(--t-body);
+  font-weight: 500;
+  line-height: 1.65;
+  color: var(--fg-2);
+}
+.body-lg { font-size: var(--t-body-lg); line-height: 1.6; }
+.body-sm { font-size: var(--t-body-sm); }
+
+.label {
+  font-family: var(--font-display);
+  font-size: var(--t-label);
+  font-weight: 500;
+  color: var(--fg-1);
+}
+
+.caption {
+  font-family: var(--font-body);
+  font-size: var(--t-caption);
+  font-weight: 500;
+  color: var(--fg-2);
+}
+
+.overline {
+  font-family: var(--font-body);
+  font-size: var(--t-overline);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-2);
+}
+
+/* ─── Helpers ─────────────────────────────── */
+.text-green { color: var(--symbo-green); }
+.text-blue  { color: var(--symbo-blue); }
+.text-ink   { color: var(--ink); }
+.text-muted { color: var(--fg-2); }
+.text-on-dark { color: var(--fg-on-dark); }
+.text-on-dark-2 { color: var(--fg-on-dark-2); }
+
+</style>
+<script id="symbo-ds-bundle">
+/* @ds-bundle: {"format":4,"namespace":"SymboDesignSystem2_1f09ed","components":[],"sourceHashes":{},"inlinedExternals":[],"unexposedExports":[]} */
+
+(() => {
+
+const __ds_ns = (window.SymboDesignSystem2_1f09ed = window.SymboDesignSystem2_1f09ed || {});
+
+const __ds_scope = {};
+
+(__ds_ns.__errors = __ds_ns.__errors || []);
+
+})();
+
+</script>
+<!-- Phosphor icons (Symbo DS icon set) -->
+<script defer src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<style>
+/* Aliases over Symbo DS tokens. Black replaces Symbo blue by request. */
+:root{
+  --dark:#1c1c1c; --hero:var(--ink-near-black,#141414);
+  --muted:var(--gray-700,#3c4a40); --muted-2:var(--gray-500,#4f4f4f);
+  --g:var(--symbo-green,#00c98f); --g-dark:var(--symbo-green-dark,#006d41); --g-deep:var(--symbo-green-deep,#004a2e);
+  --g-tint:var(--green-tint-12,rgba(0,209,130,.12)); --g-soft:var(--green-tint-soft,#ccf6e6);
+  --line:var(--border-line,#e4e2e1); --sage:var(--border,#bacbbd); --sage-soft:rgba(186,203,189,.4);
+  --surf:var(--surface,#f6f3f2); --surf-2:var(--surface-2,#fcf9f8);
+  --yellow:var(--accent-yellow,#fdd340); --amber:var(--accent-amber-deep,#715b00);
+  --fd:var(--font-display,'Inter Tight',system-ui,sans-serif); --fb:var(--font-body,'Inter',system-ui,sans-serif);
+  --grad:var(--grad-cta,linear-gradient(180deg,#006d41 0%,#00d182 100%));
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;height:100%}
+p,h1,h2,h3,h4{margin:0;font:inherit;color:inherit;letter-spacing:inherit;line-height:inherit}
+body{background:var(--surf);color:var(--ink);font-family:var(--fb);font-size:13px;line-height:1.45;-webkit-font-smoothing:antialiased;overflow:hidden}
+a{color:var(--g-dark)} a:hover{color:var(--ink)}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+button:disabled{cursor:not-allowed}
+:focus-visible{outline:2px solid var(--g);outline-offset:2px;border-radius:6px}
+.ph,.ph-bold,.ph-fill{line-height:1}
+
+/* ---------- Layout: levers | phone | outcome ---------- */
+.app{display:grid;grid-template-columns:340px minmax(0,1fr) 340px;height:100vh}
+.side{overflow-y:auto;padding:18px 16px 24px;display:flex;flex-direction:column;gap:10px;min-width:0;scrollbar-width:thin}
+.stage{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:16px;min-height:0}
+.stage-cap{font-size:12px;color:var(--muted-2)}
+
+.brand{display:flex;flex-direction:column;align-items:flex-start;gap:13px;padding:4px 2px 14px}
+.brand img{height:25px;width:auto;display:block}
+.brand h1{font-family:var(--fd);font-size:clamp(22px,2.1vw,29px);font-weight:700;line-height:1.06;letter-spacing:-.035em;color:var(--ink);text-wrap:balance}
+.right-title{font-family:var(--fd);font-size:23px;font-weight:700;line-height:1.12;letter-spacing:-.03em;margin:0 2px 4px}
+.custom-hint{font-size:12px;color:var(--muted);margin:2px 2px 10px}
+.over{font-family:var(--fb);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding:8px 2px 0;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-xs)}
+details.lv>summary{list-style:none;display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;min-height:48px}
+details.lv>summary::-webkit-details-marker{display:none}
+.lv-txt{flex:1;min-width:0;display:flex;flex-direction:column}
+.lv-t{font-family:var(--fd);font-size:13.5px;font-weight:600;color:var(--ink)}
+.lv-s{font-size:12px;color:var(--muted-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chev{width:8px;height:8px;border-right:1.6px solid var(--muted-2);border-bottom:1.6px solid var(--muted-2);transform:rotate(45deg);transition:transform .2s;flex:none;margin:0 3px 3px 0}
+details[open]>summary .chev,[aria-expanded="true"]>.chev{transform:rotate(-135deg);margin:3px 3px 0 0}
+.lv-body{padding:0 14px 6px;border-top:1px solid var(--line)}
+
+/* ---------- Lever controls (DS form styles) ---------- */
+.ctl{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px 10px;padding:9px 0;border-top:1px solid var(--line)}
+.ctl:first-child{border-top:0}
+.ctl-l{font-family:var(--fb);font-size:12px;font-weight:500;color:var(--muted)}
+.ctl-v{font-family:var(--fd);font-weight:600;font-size:12.5px;color:var(--ink)}
+.in{height:32px;width:150px;border:1px solid var(--line);border-radius:8px;padding:0 10px;font-family:var(--fd);font-size:13px;background:#fff;color:var(--ink)}
+.in:focus{outline:none;border-color:var(--g);box-shadow:0 0 0 3px rgba(0,201,143,.18)}
+.seg{display:inline-flex;flex-wrap:wrap;background:var(--surf);border-radius:8px;padding:2px;gap:2px}
+.seg button{border:0;background:none;border-radius:6px;padding:4px 9px;font-family:var(--fd);font-size:12px;font-weight:500;color:var(--muted);min-height:28px}
+.seg button[aria-checked="true"]{background:#fff;color:var(--ink);font-weight:600;box-shadow:var(--shadow-sm)}
+.tg{position:relative;width:36px;height:20px;border-radius:9999px;border:0;background:#d7d3d1;padding:0;transition:background .2s;flex:none}
+.tg::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2);transition:transform .2s}
+.tg[aria-checked="true"]{background:var(--g)}
+.tg[aria-checked="true"]::after{transform:translateX(16px)}
+.stp{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:8px;background:#fff}
+.stp button{width:28px;height:28px;border:0;background:none;font-size:15px;font-weight:600;color:var(--ink)}
+.stp output{min-width:24px;text-align:center;font-family:var(--fd);font-weight:600}
+.rng{width:100%;accent-color:var(--g)}
+
+/* ---------- Presets ---------- */
+.pr-item+.pr-item{border-top:1px solid var(--line)}
+.pr{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:0;background:none;padding:9px 12px;min-height:46px;border-radius:12px}
+.pr-k{width:24px;height:24px;border-radius:6px;background:var(--surf);font-family:var(--fd);font-weight:600;font-size:12px;display:grid;place-items:center;flex:none}
+.pr[aria-pressed="true"] .pr-k{background:var(--dark);color:#fff}
+.pr[aria-pressed="true"]{background:var(--g-tint)}
+.pr[aria-pressed="true"]::after{content:"Selected";font-size:10px;font-weight:700;color:var(--g-dark)}
+.pr-n{font-family:var(--fd);font-size:13px;font-weight:600;flex:1;min-width:0}
+.pr-who{font-size:12px;color:var(--muted-2);font-weight:400}
+.pr-d{padding:0 12px 12px 46px;display:flex;flex-direction:column;gap:6px}
+.pr-d p{font-size:12px;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:9999px;font-family:var(--fd);font-size:11.5px;font-weight:500;background:#fff;border:.6px solid var(--sage);color:var(--ink);white-space:nowrap}
+.chip.svc{background:var(--surf);border-color:transparent}
+.chip.add{background:var(--g-tint);border-color:transparent;color:var(--g-dark);font-weight:600}
+.chip.rem{background:var(--surf);border-color:transparent;color:var(--muted-2);text-decoration:line-through}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:9999px;font-family:var(--fd);font-size:11px;font-weight:600;white-space:nowrap}
+.b-green{background:var(--g-tint);color:var(--g-dark)}
+.b-dark{background:var(--dark);color:#fff}
+.b-review{background:rgba(253,211,64,.25);color:var(--amber)}
+.b-plain{background:#fff;border:.5px solid var(--line);color:var(--muted)}
+.dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
+
+/* ---------- Buttons (DS) ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:8px;font-family:var(--fd);font-weight:600;font-size:13px;padding:8px 14px;min-height:34px}
+.btn-sm{padding:5px 10px;font-size:12px;border-radius:7px;min-height:28px}
+.btn-dark{background:var(--dark);color:#fff}
+.btn-ghost{background:var(--surf);color:var(--ink)}
+.btn-primary{background:var(--grad);color:#fff;border:1px solid #00af6d;box-shadow:0 6px 16px -8px rgba(0,209,130,.5)}
+.btn-outline{background:#fff;color:var(--g-dark);border:1.5px solid var(--g)}
+.btn-lg{min-height:48px;font-size:15px;border-radius:10px;width:100%}
+
+/* ---------- Outcome panel ---------- */
+.wc{padding:14px}
+.wc.flash{animation:wcflash .9s ease-out}
+@keyframes wcflash{0%{background:var(--g-tint)}100%{background:#fff}}
+.wc-line{font-family:var(--fd);font-size:14.5px;font-weight:600;line-height:1.4;color:var(--ink);text-wrap:pretty}
+.ba{display:grid;grid-template-columns:48px minmax(0,1fr);gap:6px 8px;margin-top:10px;align-items:center}
+.ba-k{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted-2)}
+.wc details{margin-top:10px;border-top:1px solid var(--line)}
+.wc summary{list-style:none;display:flex;align-items:center;justify-content:space-between;padding:9px 0 2px;cursor:pointer;font-family:var(--fd);font-weight:600;font-size:12.5px;min-height:36px}
+.wc summary::-webkit-details-marker{display:none}
+.kv{display:grid;grid-template-columns:96px minmax(0,1fr);gap:4px 10px;margin:6px 0 0;font-size:12px}
+.kv dt{color:var(--muted-2)}
+.kv dd{margin:0;display:flex;flex-wrap:wrap;gap:4px;align-items:center;font-weight:500;min-width:0}
+.kv .chip{white-space:normal}
+.why{margin:8px 0 0;padding-left:16px;font-size:12px;color:var(--muted)}
+.why li{margin:3px 0}
+.mini{font-size:11.5px;color:var(--muted-2)}
+.mono{font-family:var(--font-mono,ui-monospace,Menlo,monospace);font-size:11.5px}
+.sl{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-top:1px solid var(--line);font-size:12px}
+.sl:first-child{border-top:0}
+.sl b{font-family:var(--fd);font-weight:600}
+.ev-t{width:100%;border-collapse:collapse;font-size:11.5px}
+.ev-t td{padding:5px 0;border-top:1px solid var(--line);vertical-align:top}
+.ev-t td+td{padding-left:8px}
+.ev-sub{border-top:1px solid var(--line)}
+.ev-sub>summary{list-style:none;display:flex;justify-content:space-between;align-items:center;padding:9px 0;cursor:pointer;font-family:var(--fd);font-weight:600;font-size:12.5px;min-height:38px}
+.ev-sub>summary::-webkit-details-marker{display:none}
+.ev-log{list-style:none;margin:0 0 8px;padding:0;max-height:220px;overflow:auto;font-size:11.5px}
+.ev-log li{display:grid;grid-template-columns:64px minmax(0,1fr);gap:8px;padding:4px 0;border-top:1px solid var(--line)}
+.change-list{list-style:none;margin:0;padding:0}
+.change-list li{border-top:1px solid var(--line);padding:10px 0;font-size:12px}
+.change-list li:first-child{border-top:0}
+.change-list time{display:block;font:11px var(--font-mono,ui-monospace,monospace);color:var(--muted-2);margin-bottom:3px}
+.change-list strong{display:block;font-family:var(--fd);font-size:12.5px}
+.rec-reason{display:block;color:var(--muted);font-size:11.5px;margin-top:3px;line-height:1.4}
+.evidence-status{padding:11px;border-radius:10px;background:var(--surf);margin:6px 0 12px}
+.evidence-status b{display:block;font-family:var(--fd);font-size:13px}
+.evidence-status span{font-size:11.5px;color:var(--muted-2)}
+.note{font-size:11.5px;color:var(--muted-2);padding:4px 2px}
+
+/* ---------- Phone ---------- */
+.phone{width:408px;height:min(852px,calc(100vh - 48px));background:var(--hero);border-radius:52px;padding:9px;box-shadow:var(--shadow-lg);flex:none}
+.screen{position:relative;width:100%;height:100%;border-radius:44px;overflow:hidden;background:#fff;display:flex;flex-direction:column;font-family:var(--fd);color:var(--ink)}
+.island{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:100px;height:28px;border-radius:20px;background:#000;z-index:6}
+.sbar{height:50px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:6px 30px 0 36px;font-size:15px;font-weight:600}
+.sb-i{display:flex;align-items:center;gap:6px}
+.bars{display:flex;align-items:flex-end;gap:2px;height:11px}
+.bars i{width:3px;background:var(--ink);border-radius:1px}
+.bars i:nth-child(1){height:4px}.bars i:nth-child(2){height:6px}.bars i:nth-child(3){height:8px}.bars i:nth-child(4){height:11px}
+.batt{width:24px;height:12px;border:1.5px solid var(--ink);border-radius:4px;padding:1.5px;position:relative}
+.batt::before{content:"";display:block;height:100%;width:78%;background:var(--ink);border-radius:1.5px}
+.app-h{flex:none;display:flex;align-items:center;gap:10px;padding:4px 16px 10px}
+.journey-tabs{display:flex;gap:5px;margin:0 16px 10px;padding:4px;background:var(--surf);border-radius:11px}
+.journey-tabs button{flex:1;border:0;border-radius:8px;background:transparent;padding:7px 4px;font-family:var(--fd);font-size:12px;font-weight:600;color:var(--muted)}
+.journey-tabs button[aria-selected="true"]{background:#fff;color:var(--ink);box-shadow:var(--shadow-sm)}
+.approval-hero{text-align:center;padding:20px 8px 8px}.approval-orb{width:86px;height:86px;margin:0 auto 14px;border-radius:50%;display:grid;place-items:center;background:var(--g-tint);color:var(--g-dark);font-size:44px;animation:approve-pop .75s cubic-bezier(.2,1.5,.4,1) both}.approval-hero h1{font-size:25px;letter-spacing:-.03em}.approval-hero p{font-size:13px;color:var(--muted-2);margin-top:5px}@keyframes approve-pop{from{opacity:0;transform:scale(.35) rotate(-25deg)}to{opacity:1;transform:scale(1) rotate(0)}}.approval-card{width:100%;border:1px solid rgba(0,201,143,.5);border-radius:14px;background:var(--g-tint);padding:15px;text-align:left;margin-top:16px;display:flex;align-items:center;gap:10px}.approval-card i{font-size:25px;color:var(--g-dark)}.approval-card span{flex:1}.approval-card b{display:block;font-size:14px}.approval-card small{display:block;color:var(--muted-2);font-size:11px;margin-top:3px}.approval-note{font-size:12px;color:var(--muted-2);padding:12px 2px}.bundled-tag{display:block;color:var(--g-dark);font-size:11px;font-weight:600;margin-top:4px}.vas .row.bundled{background:var(--g-tint)}
+.journey-explain{margin:14px 0;padding:14px;border-radius:12px;background:var(--g-tint);font-size:12px}
+.journey-explain b{font-family:var(--fd);font-size:13px}
+.journey-explain p{margin-top:5px;color:var(--muted)}
+.guide-link{width:100%;border:0;background:#fff;text-align:left;color:var(--g-dark);cursor:pointer}
+.back{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:#fff;display:grid;place-items:center;font-size:16px}
+.lb-mark{display:flex;align-items:center;gap:7px;font-weight:700;font-size:17px;letter-spacing:-.02em;flex:1}
+.lb-mark i{width:18px;height:18px;border-radius:5px;background:var(--yellow);position:relative;display:inline-block}
+.lb-mark i::after{content:"";position:absolute;inset:5px;border-radius:2px;background:var(--dark)}
+.help{border:1px solid var(--line);background:#fff;border-radius:9999px;padding:5px 12px;font-size:12.5px;font-weight:600;min-height:32px}
+.prog{flex:none;display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:0 16px 12px}
+.prog span{height:3px;border-radius:2px;background:var(--dark)}
+.prog span:last-child{background:var(--yellow)}
+.scroll{flex:1;min-height:0;overflow-y:auto;padding:0 16px 20px;scrollbar-width:none}
+.scroll::-webkit-scrollbar{display:none}
+.pg-t{font-size:22px;font-weight:600;letter-spacing:-.02em;margin:2px 0 2px}
+.pg-s{font-size:12.5px;color:var(--muted-2);font-family:var(--fb)}
+
+.loan{border:1px solid var(--line);border-radius:16px;padding:14px;margin-top:12px;transition:background .6s}
+.loan.flash{animation:lflash .9s ease-out}
+@keyframes lflash{0%{background:rgba(253,211,64,.18)}100%{background:#fff}}
+.loan-top{white-space:nowrap;display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--muted-2);font-family:var(--fb)}
+.loan-amt{font-size:30px;font-weight:600;letter-spacing:-.03em;margin:2px 0 10px}
+.loan-g{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;margin:0;padding-top:10px;border-top:1px solid var(--line)}
+.loan-g dt{font-family:var(--fb);font-size:11.5px;color:var(--muted-2)}
+.loan-g dd{margin:1px 0 0;font-size:14.5px;font-weight:600}
+.loan-rcv{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--surf);font-size:12.5px}
+.loan-rcv b{font-size:15px;font-weight:600}
+.li-row{display:flex;align-items:center;gap:10px;padding:12px 2px;border-bottom:1px solid var(--line);font-size:13px}
+.li-row .ph{font-size:18px;color:var(--muted)}
+.li-row span{flex:1}
+
+/* ---------- Symbo embedded module ---------- */
+.sy{margin-top:14px;border:1px solid rgba(0,201,143,.5);border-radius:14px;background:#fff;overflow:hidden;box-shadow:0 10px 24px -16px rgba(0,209,130,.55);transition:opacity 260ms ease,transform 260ms ease}
+.sy::before{content:"";display:block;height:3px;background:var(--grad-bottom-bar,linear-gradient(90deg,#00d182 25%,#fdd340 84%))}
+.sy.updating{opacity:.25;transform:translateY(3px);transition-duration:110ms}
+.sy-h{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:0;background:rgba(0,209,130,.08);padding:12px 14px;min-height:58px}
+.sy-ic{width:34px;height:34px;border-radius:50%;background:#fff;color:var(--g-dark);border:1.5px dashed rgba(0,201,143,.7);display:grid;place-items:center;font-size:17px;flex:none;transition:background .25s,color .25s}
+.sy.on .sy-ic{background:var(--g);color:#fff;border:1.5px solid var(--g);box-shadow:0 0 0 4px rgba(0,209,130,.18)}
+.sy-on{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:9999px;background:var(--g);color:#fff;font-size:11px;font-weight:600}
+.sy-ht{flex:1;min-width:0}
+.sy-t{display:flex;align-items:center;gap:6px;font-size:14.5px;font-weight:600}
+.sy-s{font-family:var(--fb);font-size:12px;color:var(--muted-2);margin-top:1px}
+.sy-note{margin:0 14px 10px;padding:8px 10px;border-radius:8px;background:rgba(253,211,64,.22);color:var(--amber);font-size:12px;font-family:var(--fb)}
+.rows{list-style:none;margin:0;padding:0}
+.row{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:4px 10px;padding:11px 14px;border-top:1px solid var(--line);align-items:start}
+.row.on{background:rgba(0,209,130,.06)}
+.row.new{animation:rnew 1.3s ease-out}
+@keyframes rnew{0%{background:var(--g-tint)}100%{background:#fff}}
+.row-ic{width:30px;height:30px;border-radius:50%;background:var(--g-tint);color:var(--g-dark);display:grid;place-items:center;font-size:15px}
+.row.svc .row-ic{background:var(--surf);color:var(--ink)}
+.row-n{display:flex;align-items:center;gap:2px;font-size:13.5px;font-weight:600;line-height:1.25}
+.info{position:relative;width:24px;height:24px;border:0;background:none;padding:0;display:grid;place-items:center;flex:none}
+.info::before{content:"";position:absolute;inset:-8px}
+.info span{width:16px;height:16px;border-radius:50%;border:1.2px solid var(--muted-2);color:var(--muted-2);font:italic 700 10.5px/14px Georgia,serif;text-align:center}
+.row-m{font-family:var(--fb);font-size:11.5px;color:var(--muted-2);margin-top:1px}
+.row-w{font-family:var(--fb);font-size:11.5px;color:var(--g-dark);margin-top:2px;display:flex;gap:5px;align-items:baseline}
+.row-w::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--g);flex:none;transform:translateY(-1px)}
+.row-side{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+.row-p{font-size:13.5px;font-weight:600;font-variant-numeric:tabular-nums}
+.row-p small{white-space:nowrap;display:block;text-align:right;font-family:var(--fb);font-size:10.5px;color:var(--muted-2);font-weight:500}
+.add,.rm{position:relative;min-height:30px;border-radius:7px;padding:0 12px;font-family:var(--fd);font-size:12.5px;font-weight:600}
+.add::before,.rm::before{content:"";position:absolute;inset:-7px -4px}
+.add{display:inline-flex;align-items:center;gap:4px;background:var(--grad);color:#fff;border:1px solid #00af6d;box-shadow:0 6px 14px -8px rgba(0,209,130,.6)}
+.rm{background:none;border:0;color:var(--muted-2);text-decoration:underline;text-underline-offset:2px;padding:0 2px;min-height:22px}
+.added{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:var(--g-dark);background:var(--g-tint);border-radius:9999px;padding:3px 9px}
+.si{grid-column:2/4;display:flex;gap:6px;margin-top:6px}
+.sip{position:relative;flex:1;border:1px solid var(--line);border-radius:8px;background:#fff;padding:5px 2px;min-height:40px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12.5px;font-weight:600;line-height:1.2}
+.sip small{font-family:var(--fb);font-size:10.5px;color:var(--muted-2);font-weight:500}
+.sip[aria-checked="true"]{border-color:var(--dark);box-shadow:inset 0 0 0 1px var(--dark)}
+.sip .sg{position:absolute;top:-6px;right:-4px;font-size:9.5px;font-weight:600;font-family:var(--fb);background:var(--g);color:#fff;border-radius:9999px;padding:0 5px;line-height:14px}
+.vas{border-top:1px solid var(--line)}
+.vas>summary{list-style:none;display:flex;align-items:center;gap:8px;padding:11px 14px;cursor:pointer;min-height:46px}
+.vas>summary::-webkit-details-marker{display:none}
+.vas-t{flex:1;font-size:13px;font-weight:600}
+.vas .row:first-child{border-top:1px solid var(--line)}
+.tot{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 14px;border-top:1px solid var(--line);background:var(--surf-2)}
+.tot b{font-size:14.5px;font-weight:600}
+.tot span{font-family:var(--fb);font-size:11.5px;color:var(--muted-2)}
+.pw{white-space:nowrap;display:flex;align-items:center;gap:6px;padding:9px 14px 11px;border-top:1px solid var(--line);font-family:var(--fb);font-size:11px;color:var(--muted-2)}
+.pw img{height:12px;width:auto;display:block}
+
+.foot{flex:none;padding:10px 16px 28px;border-top:1px solid var(--line);background:#fff;position:relative;display:flex;flex-direction:column;gap:8px}
+.foot::after{content:"";position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:130px;height:5px;border-radius:3px;background:var(--dark)}
+.foot-l{display:flex;justify-content:space-between;font-family:var(--fb);font-size:12px;color:var(--muted-2)}
+.foot-l b{color:var(--ink);font-family:var(--fd)}
+.foot-b{display:flex;gap:8px}
+.cta{flex:1;min-height:50px;border-radius:12px;border:0;background:var(--dark);color:#fff;font-family:var(--fd);font-weight:600;font-size:15px}
+.cta-2{flex:0 0 auto;min-height:50px;border-radius:12px;border:1px solid var(--line);background:#fff;font-family:var(--fd);font-weight:600;font-size:13.5px;padding:0 14px}
+
+/* ---------- Sheets ---------- */
+.sheet-wrap{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;justify-content:flex-end;background:rgba(20,20,20,.45);animation:fade .2s ease}
+.sheet{background:#fff;border-radius:22px 22px 0 0;max-height:86%;display:flex;flex-direction:column;animation:up .25s ease}
+@keyframes fade{from{opacity:0}} @keyframes up{from{transform:translateY(24px);opacity:.6}}
+.grip{width:36px;height:4px;border-radius:2px;background:var(--line);margin:8px auto 0}
+.sh-h{display:flex;gap:10px;align-items:flex-start;padding:12px 18px 10px}
+.sh-k{font-family:var(--fb);font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--g-dark)}
+.sh-t{font-size:18px;font-weight:600;letter-spacing:-.01em;margin-top:2px}
+.sh-x{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:#fff;font-size:18px;flex:none;margin-left:auto}
+.sh-b{overflow-y:auto;padding:0 18px 4px;min-height:0;font-family:var(--fb)}
+.sh-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 12px;padding:10px 12px;border-radius:10px;background:var(--surf)}
+.sh-meta.two{grid-template-columns:repeat(2,1fr)}
+.sh-meta dt{font-size:11px;color:var(--muted-2)}
+.sh-meta dd{margin:1px 0 0;font-family:var(--fd);font-size:13px;font-weight:600}
+.sh-b h3{font-family:var(--fd);font-size:12.5px;font-weight:600;margin:10px 0 4px}
+.sh-b ul{margin:0;padding-left:18px;font-size:12.5px;color:var(--ink)}
+.sh-b li{margin:3px 0}
+.sh-fine{font-size:11.5px;color:var(--muted-2);margin:10px 0 4px}
+.sh-f{padding:12px 18px 28px;display:flex;flex-direction:column;gap:8px}
+.rec{list-style:none;margin:0;padding:0;counter-reset:r}
+.rec li{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-top:1px solid var(--line);font-size:13px;counter-increment:r}
+.rec li:first-child{border-top:0}
+.rec li span::before{content:counter(r) ". ";color:var(--muted-2)}
+.rec small{display:block;color:var(--muted-2);font-size:11.5px;padding-left:16px}
+.toast{position:absolute;left:16px;right:16px;bottom:100px;z-index:30;background:var(--dark);color:#fff;border-radius:12px;padding:12px 14px;font-size:13px;font-weight:500}
+
+/* ---------- Narrow screens: phone first, levers in drawers ---------- */
+.dt{display:none}
+@media (max-width:1180px){
+  body{overflow-y:auto;overflow-x:hidden}
+  .app{grid-template-columns:1fr;height:auto;min-height:100vh}
+  .stage{min-height:100vh;padding-bottom:80px}
+  .side{position:fixed;top:0;bottom:0;width:min(360px,92vw);background:var(--surf);z-index:70;box-shadow:var(--shadow-lg);transition:transform .25s ease;visibility:hidden}
+  #levers{left:0;transform:translateX(-104%)} #outcome{right:0;transform:translateX(104%)}
+  #levers.open,#outcome.open{transform:none;visibility:visible}
+  .phone{height:min(852px,calc(100vh - 120px))}
+  .dt{display:flex;position:fixed;bottom:16px;left:50%;transform:translateX(-50%);gap:8px;z-index:60}
+  .dt .btn{min-height:44px;box-shadow:var(--shadow-md)}
+  .scrim.open{position:fixed;inset:0;background:rgba(20,20,20,.3);z-index:65}
+}
+@media (max-width:460px){
+  .stage{padding:0 0 70px;justify-content:flex-start}
+  .stage-cap{display:none}
+  .phone{width:100%;height:calc(100vh - 70px);border-radius:0;padding:0;background:none;box-shadow:none}
+  .screen{border-radius:0} .island{display:none}
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ============ LEFT: customer presets + profile levers (presenter) ============ -->
+  <aside class="side" id="levers" aria-label="Customer profile levers">
+    <div class="brand"><img id="symbo-logo" src="/symbo-logo.png" alt="Symbo"><h1>Embedded Protection Widget</h1></div>
+    <div class="over"><span>Customer Persona Presets</span></div>
+    <div class="card" id="presets"></div>
+    <div id="custom-levers" hidden><div class="over"><span>Build your own persona</span></div><p class="custom-hint">Edit the test customer below. The checkout and recommendation update as you change a signal.</p><div id="lever-groups" style="display:flex;flex-direction:column;gap:8px"></div></div>
+  </aside>
+
+  <!-- ============ CENTER: LoanBee checkout (customer-facing) ============ -->
+  <main class="stage" aria-label="LoanBee checkout preview">
+    <div class="phone">
+      <div class="screen" id="phone">
+        <div class="island" aria-hidden="true"></div>
+        <div class="sbar" aria-hidden="true"><span>9:41</span><span class="sb-i"><span class="bars"><i></i><i></i><i></i><i></i></span><span class="batt"></span></span></div>
+        <header class="app-h">
+          <button type="button" class="back" aria-label="Back" data-action="noop"><i class="ph-bold ph-arrow-left"></i></button>
+          <span class="lb-mark" aria-label="LoanBee"><i aria-hidden="true"></i>LoanBee</span>
+          <button type="button" class="help" data-action="help">Help</button>
+        </header>
+        <div class="prog" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="scroll" id="scroll"><div id="sanctioned-view" hidden><div class="approval-hero"><div class="approval-orb" aria-hidden="true"><i class="ph-bold ph-check"></i></div><h1>Loan approved!</h1><p>Your LoanBee loan is ready · demo approval</p></div><div id="sanction-summary"></div><div id="approval-protection"></div><p class="approval-note">This is an illustrative loan journey. No loan is disbursed and no policy is issued.</p></div><div id="checkout-view">
+          <h1 class="pg-t">Review and sign</h1>
+          <p class="pg-s">Step 5 of 5 · Check your offer</p>
+          <div id="loan-summary" data-loan-summary></div>
+          <!-- Symbo-powered region. Only this re-renders on profile change. -->
+          <section class="sy" id="insurance-module" data-symbo-module aria-label="Optional protection"></section>
+          <div class="li-row"><i class="ph ph-file-text" aria-hidden="true"></i><span>Key Fact Statement</span><i class="ph ph-caret-right" aria-hidden="true"></i></div>
+          <div class="li-row"><i class="ph ph-bank" aria-hidden="true"></i><span>Repay by UPI Autopay · demo account</span></div><button type="button" class="li-row guide-link" data-action="bundle-guide"><i class="ph ph-info" aria-hidden="true"></i><span>Protection details &amp; how to use them</span><i class="ph ph-caret-right" aria-hidden="true"></i></button></div></div>
+        <footer class="foot" id="foot"></footer>
+        <div id="sheet-root"></div>
+        <div id="toast-root"></div>
+      </div>
+    </div>
+    <p class="stage-cap">LoanBee owns the journey · Symbo powers the protection section</p>
+  </main>
+
+  <!-- ============ RIGHT: recommendations and records ============ -->
+  <aside class="side" id="outcome" aria-label="Recommendations and evidence">
+    <div class="over" style="padding-top:2px"><span>Symbo decision view</span></div>
+    <h2 class="right-title">Recommendations &amp; records</h2>
+    <section class="card wc" id="what-changed" data-what-changed aria-live="polite">
+      <div class="over" style="padding:0 0 6px"><span>Latest change</span><span class="mini" id="wc-time"></span></div>
+      <p class="wc-line" id="wc-line" data-wc-headline></p>
+      <div class="ba" id="wc-ba"></div><div id="wc-body"></div>
+    </section>
+    <details class="card lv" id="sl-card" open>
+      <summary><span class="lv-txt"><span class="lv-t">Recommended &amp; why</span><span class="lv-s" id="sl-sum"></span></span><span id="sl-status"></span><span class="chev"></span></summary>
+      <div class="lv-body" id="sl-body"></div>
+    </details>
+    <details class="card lv" id="change-card" open>
+      <summary><span class="lv-txt"><span class="lv-t">Live change records</span><span class="lv-s">Profile, recommendation and choice events</span></span><span class="chev"></span></summary>
+      <div class="lv-body"><ul class="change-list" id="change-list"></ul></div>
+    </details>
+    <details class="card lv" id="ev-card">
+      <summary><span class="lv-txt"><span class="lv-t">Consent &amp; audit evidence</span><span class="lv-s" id="ev-sum"></span></span><span class="badge b-review">Demo</span><span class="chev"></span></summary>
+      <div class="lv-body" id="evidence-view" data-evidence>
+        <div id="ev-main"></div>
+        <details class="ev-sub"><summary>Profile signals used<span class="chev"></span></summary><div id="ev-signals"></div></details>
+        <details class="ev-sub"><summary>Full event log<span class="chev"></span></summary><ul class="ev-log" id="ev-log"></ul></details>
+        <div style="padding:8px 0 8px"><button type="button" class="btn btn-ghost btn-sm" data-action="copy-evidence">Copy evidence JSON</button></div>
+      </div>
+    </details>
+    <p class="note">Browser-only demo evidence and reference rate-card prices. No live quote, payment, policy issuance or production audit record.</p>
+  </aside>
+</div>
+<div class="scrim" id="scrim" data-action="close-drawers"></div>
+<div class="dt"><button type="button" class="btn btn-dark" data-action="drawer" data-drawer="levers" aria-controls="levers">Customer levers</button><button type="button" class="btn btn-dark" data-action="drawer" data-drawer="outcome" aria-controls="outcome">Outcome</button></div>
+
+<script src="./config.js"></script>
+<script src="./source-data.js"></script>
+<script src="./engine.js"></script>
+<script src="./loanbee-engine.js"></script>
+<script>
+'use strict';
+/* Synthetic loan presets and UI fields. Insurance logic is in loanbee-engine.js. */
+const LOAN_RATES = { 'Personal loan': 16, 'Business loan': 18, 'Two-wheeler loan': 12, 'Consumer durable': 14 };
+const PROCESSING_FEE_PCT = 2;
+const TENURES = [6, 12, 18, 24, 36];
+
+const PRESETS = {
+  A: { label: 'Short loan', blurb: '6-month loan, self-employed, low digital activity.',
+    profile: { name: 'Ravi Kumar', age: 34, gender: 'Male', city: 'Nagpur', cityTier: 'Tier 2', dependants: 1, children: 0, employment: 'Self-employed', businessOwner: false, incomePattern: 'Seasonal', monthlyIncome: 55000, loanType: 'Personal loan', loanAmount: 60000, tenure: 6, vectorExposure: 'Low', digitalFirst: false, upiUsage: 'Low', onlineTxn: 'Low', hospitalCashNeed: 'No' } },
+  B: { label: 'Digital-first', blurb: 'Daily UPI, frequent online payments, salaried.',
+    profile: { name: 'Ananya Iyer', age: 27, gender: 'Female', city: 'Bengaluru', cityTier: 'Tier 1', dependants: 0, children: 0, employment: 'Salaried', businessOwner: false, incomePattern: 'Stable', monthlyIncome: 90000, loanType: 'Personal loan', loanAmount: 300000, tenure: 24, vectorExposure: 'Low', digitalFirst: true, upiUsage: 'High', onlineTxn: 'High', hospitalCashNeed: 'No' } },
+  C: { label: 'Family and health', blurb: '3 dependants, variable income, wants hospital cash.',
+    profile: { name: 'Sunita Patil', age: 38, gender: 'Female', city: 'Pune', cityTier: 'Tier 2', dependants: 3, children: 2, employment: 'Self-employed', businessOwner: false, incomePattern: 'Variable', monthlyIncome: 45000, loanType: 'Personal loan', loanAmount: 150000, tenure: 12, vectorExposure: 'Medium', digitalFirst: false, upiUsage: 'Medium', onlineTxn: 'Low', hospitalCashNeed: 'Yes' } },
+  D: { label: 'Business owner', blurb: '36-month business loan, dependants, high vector exposure.',
+    profile: { name: 'Imran Shaikh', age: 45, gender: 'Male', city: 'Surat', cityTier: 'Tier 2', dependants: 3, children: 2, employment: 'Self-employed', businessOwner: true, incomePattern: 'Variable', monthlyIncome: 80000, loanType: 'Business loan', loanAmount: 800000, tenure: 36, vectorExposure: 'High', digitalFirst: false, upiUsage: 'Medium', onlineTxn: 'Medium', hospitalCashNeed: 'Not sure' } }
+};
+
+const FIELD_META = {
+  name: { label: 'Name', source: 'KYC', type: 'text', usedFor: 'Display only' },
+  age: { label: 'Age', source: 'KYC', type: 'int', min: 18, max: 75, usedFor: 'Suitability and cover context' },
+  gender: { label: 'Gender', source: 'KYC', type: 'text', options: ['Female', 'Male', 'Other'], usedFor: 'Not used' },
+  city: { label: 'City', source: 'KYC', type: 'text', usedFor: 'Display only' },
+  cityTier: { label: 'City tier', source: 'Derived', type: 'text', options: ['Tier 1', 'Tier 2', 'Tier 3'], usedFor: 'Blood test collection' },
+  dependants: { label: 'Dependants', source: 'Customer', type: 'int', min: 0, max: 8, usedFor: 'PA cover, Doctor on Call' },
+  children: { label: 'Children', source: 'Customer', type: 'int', min: 0, max: 6, usedFor: 'Blood test' },
+  employment: { label: 'Employment', source: 'Customer', type: 'text', options: ['Salaried', 'Self-employed', 'Gig / freelance'], usedFor: 'Context' },
+  businessOwner: { label: 'Business owner', source: 'Customer', type: 'bool', usedFor: 'PA cover, Udyam' },
+  incomePattern: { label: 'Income pattern', source: 'Customer', type: 'text', options: ['Stable', 'Variable', 'Seasonal'], usedFor: 'EMI Protect' },
+  monthlyIncome: { label: 'Monthly income', source: 'Application', type: 'int', min: 1000, max: 10000000, usedFor: 'EMI / income suitability' },
+  loanType: { label: 'Loan type', source: 'Application', type: 'text', options: Object.keys(LOAN_RATES), usedFor: 'Loan rate' },
+  loanAmount: { label: 'Loan amount', source: 'Application', type: 'int', min: 25000, max: 1500000, step: 5000, usedFor: 'PA cover, EMI Protect' },
+  tenure: { label: 'Tenure', source: 'Application', type: 'int', options: TENURES, usedFor: 'PA cover, EMI Protect term' },
+  emi: { label: 'Monthly EMI', source: 'Application', type: 'int', min: 0, max: 200000, usedFor: 'EMI Protect cover' },
+  vectorExposure: { label: 'Vector-borne exposure', source: 'Asked', type: 'text', options: ['Low', 'Medium', 'High'], usedFor: 'Vector-Borne, blood test' },
+  digitalFirst: { label: 'Digital-first', source: 'Asked', type: 'bool', usedFor: 'Cyber, dark web' },
+  upiUsage: { label: 'UPI usage', source: 'Asked', type: 'text', options: ['Low', 'Medium', 'High'], usedFor: 'Cyber' },
+  onlineTxn: { label: 'Online transactions', source: 'Asked', type: 'text', options: ['Low', 'Medium', 'High'], usedFor: 'Cyber, dark web' },
+  hospitalCashNeed: { label: 'Hospital cash need', source: 'Asked directly', type: 'text', options: ['Yes', 'No', 'Not sure'], usedFor: 'Hospi Cash' }
+};
+const LOAN_FIELDS = ['loanType', 'loanAmount', 'tenure', 'emi'];
+
+const LEVER_GROUPS = [
+  { title: 'Identity', src: 'KYC', fields: [['name', 'text'], ['age', 'number'], ['gender', 'seg'], ['city', 'text'], ['cityTier', 'seg']], sum: p => `${p.name} · ${p.age} · ${p.city}` },
+  { title: 'Household and work', src: 'Customer', fields: [['dependants', 'stepper'], ['children', 'stepper'], ['employment', 'select'], ['businessOwner', 'switch'], ['incomePattern', 'seg'], ['monthlyIncome', 'number']], sum: p => `${p.dependants} dependant${p.dependants === 1 ? '' : 's'} · ${p.incomePattern} income · ${fmtINR(p.monthlyIncome)}/mo${p.businessOwner ? ' · business' : ''}` },
+  { title: 'Loan', src: 'Application', fields: [['loanType', 'select'], ['loanAmount', 'range'], ['tenure', 'seg'], ['emi', 'number']], sum: p => `${fmtINR(p.loanAmount)} · ${p.tenure} months` },
+  { title: 'Digital behaviour', src: 'Asked', fields: [['digitalFirst', 'switch'], ['upiUsage', 'seg'], ['onlineTxn', 'seg']], sum: p => `UPI ${p.upiUsage.toLowerCase()} · online ${p.onlineTxn.toLowerCase()}${p.digitalFirst ? ' · digital-first' : ''}` },
+  { title: 'Health and exposure', src: 'Asked directly', fields: [['vectorExposure', 'seg'], ['hospitalCashNeed', 'seg']], sum: p => `Vector ${p.vectorExposure.toLowerCase()} · hospital cash ${p.hospitalCashNeed.toLowerCase()}` }
+];
+
+/* ---------- helpers ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmtINR = n => '₹' + Number(n).toLocaleString('en-IN', { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 });
+const fmtL = n => n >= 100000 ? '₹' + (n / 100000).toLocaleString('en-IN', { maximumFractionDigits: 1 }) + 'L' : fmtINR(n);
+const fmtLakh = n => n >= 100000 ? '₹' + (n / 100000).toLocaleString('en-IN', { maximumFractionDigits: 1 }) + ' lakh' : fmtINR(n);
+const fmtTime = d => d.toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+const fmtClock = d => d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+function calcEmi(p, rate, n) { const r = rate / 1200; if (!r) return Math.round(p / n); const f = Math.pow(1 + r, n); return Math.round(p * r * f / (f - 1)); }
+function hashId(o) { const s = JSON.stringify(o); let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36).toUpperCase().padStart(7, '0').slice(0, 7); }
+
+/* =====================================================================
+   3. STATE
+   ===================================================================== */
+const state = {
+  profile: Object.assign({}, PRESETS.A.profile),
+  activePreset: 'A', mode: 'preset', phoneView: 'checkout',
+  result: null, baseline: null, lastChangeAt: 0, diff: null,
+  added: {}, vasAdded: {}, paSI: null,      // nothing added by default
+  decision: null, notice: false,
+  moduleOpen: true, vasOpen: false,
+  sheet: null, sheetOpener: null,
+  presentedAt: null, events: []
+};
+state.profile.emi = calcEmi(state.profile.loanAmount, LOAN_RATES[state.profile.loanType], state.profile.tenure);
+function logEvent(type, text) { state.events.unshift({ at: new Date(), type, text }); if (state.events.length > 80) state.events.pop(); }
+
+/* =====================================================================
+   4. PROFILE -> ENGINE -> RENDER
+   ===================================================================== */
+function parseVal(k, raw) { const t = (FIELD_META[k] || {}).type; return t === 'int' ? parseInt(raw, 10) : t === 'bool' ? (raw === true || raw === 'true') : raw; }
+function clamp(p) {
+  const c = (k, lo, hi) => { if (Number.isFinite(p[k])) p[k] = Math.max(lo, Math.min(hi, p[k])); };
+  c('age', 18, 75); c('dependants', 0, 8); c('children', 0, 6); c('monthlyIncome', 1000, 10000000); c('loanAmount', 25000, 1500000); c('emi', 0, 200000);
+  p.children = Math.min(p.children, p.dependants);
+  if (!TENURES.includes(p.tenure)) p.tenure = 12;
+}
+function fmtField(k, v) { if (v == null) return '-'; if (k === 'loanAmount' || k === 'emi' || k === 'monthlyIncome') return fmtINR(v); if (typeof v === 'boolean') return v ? 'Yes' : 'No'; return String(v); }
+
+function setProfile(patch, meta = {}) {
+  const prev = Object.assign({}, state.profile), clean = {};
+  Object.keys(patch).forEach(k => {
+    if (!(k in FIELD_META)) return;
+    const v = typeof patch[k] === 'string' && FIELD_META[k].type !== 'text' ? parseVal(k, patch[k]) : patch[k];
+    if (FIELD_META[k].type === 'int' && !Number.isFinite(v)) return;
+    clean[k] = v;
+  });
+  Object.assign(state.profile, clean); clamp(state.profile);
+  const p = state.profile;
+  if (!('emi' in clean) && ['loanAmount', 'tenure', 'loanType'].some(k => k in clean)) p.emi = calcEmi(p.loanAmount, LOAN_RATES[p.loanType] || 16, p.tenure);
+  const changed = Object.keys(FIELD_META).filter(k => prev[k] !== p[k]);
+  if (!changed.length && !meta.force) return;
+  if (state.phoneView === 'sanctioned') { state.phoneView = 'checkout'; state.decision = null; logEvent('loan', 'New customer profile returned journey to checkout'); }
+  if (meta.source !== 'preset') state.activePreset = state.mode === 'custom' ? 'custom' : Object.keys(PRESETS).find(id => Object.keys(PRESETS[id].profile).every(k => PRESETS[id].profile[k] === p[k])) || null;
+
+  const now = Date.now();
+  if (meta.source === 'preset' || now - state.lastChangeAt > 1500) state.baseline = state.result;
+  state.lastChangeAt = now;
+  if (meta.source === 'preset') logEvent('profile', `Preset ${meta.preset} loaded (${p.name})`);
+  else changed.forEach(k => logEvent('profile', `${FIELD_META[k].label}: ${fmtField(k, prev[k])} → ${fmtField(k, p[k])}`));
+
+  syncInputs(document.activeElement);
+  if (changed.some(k => LOAN_FIELDS.includes(k))) renderLoan(true);
+
+  renderResult(SymboCheckoutEngine.recommend(p), { source: meta.source });
+  renderPhoneView();
+}
+
+const quoteSig = r => r ? JSON.stringify({ p: r.products.map(x => [x.id, x.cover, x.premium, x.termMonths, x.vasFee, x.siOptions]), v: r.vas.map(v => v.id) }) : '';
+const proposedTotal = r => SymboCheckoutEngine.round2(r.products.reduce((s, x) => s + x.premium, 0) + (r.vas.length ? SymboCheckoutEngine.indicativeBundleFee(r) || 0 : 0));
+const normalize = r => Object.assign({ products: [], vas: [], notRecommended: [], reasons: [], signals: [], recommendationId: 'REC-EXTERNAL', ruleVersion: 'external', generatedAt: new Date().toISOString() }, r);
+
+function renderResult(raw, opts = {}) {
+  const result = normalize(raw), prev = state.result;
+  const material = prev && quoteSig(prev) !== quoteSig(result);
+  if (material) {
+    // Never carry consent across a material quote change: everything returns to pending.
+    const had = state.decision || Object.values(state.added).some(Boolean) || Object.values(state.vasAdded).some(Boolean);
+    if (had) { state.notice = true; logEvent('consent', 'Consent returned to pending review (quote changed)'); }
+    state.added = {}; state.vasAdded = {}; state.decision = null;
+    if (state.sheet) closeSheet();
+  }
+  const pa = result.products.find(x => x.id === 'pa'), prevPa = prev && prev.products.find(x => x.id === 'pa');
+  if (pa && (!prevPa || prevPa.suggestedSI !== pa.suggestedSI || !pa.siOptions.some(o => o.si === state.paSI))) state.paSI = pa.suggestedSI;
+  state.result = result;
+  if (!prev || material || opts.source === 'preset') {
+    logEvent('recommendation', `${result.recommendationId}: ${result.products.map(x => x.name).join(' + ') || 'no products'}`);
+    state.presentedAt = new Date();
+  }
+  if (state.baseline) state.diff = diffResults(state.baseline, result);
+  renderModule({ animate: !!prev && material, prev });
+  renderOutcome(); renderEvidence(); renderFooter(); renderPresets();
+}
+
+function diffResults(a, b) {
+  const ids = r => r.products.map(x => x.id), vids = r => r.vas.map(v => v.id);
+  const added = b.products.filter(x => !ids(a).includes(x.id)), removed = a.products.filter(x => !ids(b).includes(x.id));
+  const vasAdded = b.vas.filter(v => !vids(a).includes(v.id)), vasRemoved = a.vas.filter(v => !vids(b).includes(v.id));
+  const pA = a.products.find(x => x.id === 'pa'), pB = b.products.find(x => x.id === 'pa');
+  const siBefore = pA ? pA.suggestedSI : null, siAfter = pB ? pB.suggestedSI : null;
+  const totalBefore = proposedTotal(a), totalAfter = proposedTotal(b);
+  const names = b.products.map(x => x.name).join(' + ');
+  let headline;
+  if (added.length && removed.length) headline = `Customer changed → ${names} recommended · ${removed.map(x => x.name).join(', ')} replaced`;
+  else if (added.length) headline = `Customer changed → ${names} recommended · ${added.map(x => x.name).join(', ')} added`;
+  else if (removed.length) headline = `Customer changed → ${names || 'no products'} recommended · ${removed.map(x => x.name).join(', ')} removed`;
+  else if (siBefore !== siAfter && siAfter) headline = `Customer changed → Personal Accident cover ${siBefore ? fmtLakh(siBefore) : 'none'} to ${fmtLakh(siAfter)}`;
+  else if (vasAdded.length || vasRemoved.length) headline = 'Customer changed → same insurance, services updated';
+  else if (totalBefore !== totalAfter) headline = 'Customer changed → same shortlist, price updated';
+  else headline = 'Profile updated → shortlist unchanged';
+  const reasons = [];
+  added.forEach(x => reasons.push(x.reason));
+  removed.forEach(x => { const n = b.notRecommended.find(m => m.id === x.id); if (n) reasons.push(n.reason.replace('is not shortlisted', 'leaves the shortlist')); });
+  if (siBefore !== siAfter && pB) reasons.push(pB.reason);
+  vasAdded.forEach(v => reasons.push(v.reason));
+  if (!reasons.length) b.reasons.forEach(r => reasons.push(r));
+  const changedAny = added.length || removed.length || siBefore !== siAfter || vasAdded.length || vasRemoved.length || totalBefore !== totalAfter;
+  return { at: new Date(), headline, before: a, after: b, added, removed, vasAdded, vasRemoved, siBefore, siAfter, totalBefore, totalAfter, changedAny, reasons: [...new Set(reasons)].slice(0, 3) };
+}
+
+/* =====================================================================
+   5. CUSTOMER UI: LoanBee checkout + embedded Symbo module
+   ===================================================================== */
+function renderLoan(flash) {
+  const p = state.profile, fee = Math.round(p.loanAmount * PROCESSING_FEE_PCT / 100 * 1.18);
+  $('#loan-summary').innerHTML = `<div class="loan${flash ? ' flash' : ''}">
+    <div class="loan-top"><span>${esc(p.loanType)}</span><span class="badge b-green"><span class="dot"></span>Approved</span></div>
+    <div class="loan-amt" data-loan-amount>${fmtINR(p.loanAmount)}</div>
+    <dl class="loan-g">
+      <div><dt>Loan tenure</dt><dd data-loan-tenure>${p.tenure} months</dd></div>
+      <div><dt>Monthly EMI</dt><dd data-loan-emi>${fmtINR(p.emi)}</dd></div>
+      <div><dt>Interest</dt><dd>${LOAN_RATES[p.loanType] || 16}% p.a.</dd></div>
+      <div><dt>Processing fee</dt><dd>${fmtINR(fee)}</dd></div>
+    </dl>
+    <div class="loan-rcv"><span>You receive</span><b>${fmtINR(p.loanAmount - fee)}</b></div>
+  </div>`;
+  $('#sanction-summary').innerHTML = `<div class="loan${flash ? ' flash' : ''}"><div class="loan-top"><span>${esc(p.loanType)}</span><span class="badge b-green">Sanctioned · demo</span></div><div class="loan-amt">${fmtINR(p.loanAmount)}</div><dl class="loan-g"><div><dt>Loan term</dt><dd>${p.tenure} months</dd></div><div><dt>Monthly EMI</dt><dd>${fmtINR(p.emi)}</dd></div><div><dt>Interest</dt><dd>${LOAN_RATES[p.loanType] || 16}% p.a.</dd></div><div><dt>Processing fee</dt><dd>${fmtINR(fee)}</dd></div></dl><div class="loan-rcv"><span>Illustrative amount received</span><b>${fmtINR(p.loanAmount - fee)}</b></div></div>`;
+}
+function renderPhoneView() {
+  $('#sanctioned-view').hidden = state.phoneView !== 'sanctioned';
+  $('#checkout-view').hidden = state.phoneView !== 'checkout';
+  $('.prog').hidden = state.phoneView === 'sanctioned';
+  if (state.phoneView === 'sanctioned') {
+    const d = state.decision, accepted = d && d.type === 'accepted';
+    $('#approval-protection').innerHTML = accepted
+      ? `<button type="button" class="approval-card" data-action="bundle-guide"><i class="ph-fill ph-shield-check" aria-hidden="true"></i><span><b>LoanBee Protect Plan</b><small>${esc(d.items.filter(x => x.kind === 'insurance').map(x => x.name).join(' + '))} · ${d.items.filter(x => x.kind === 'service').length} bundled service${d.items.filter(x => x.kind === 'service').length === 1 ? '' : 's'}</small></span><i class="ph ph-caret-right" aria-hidden="true"></i></button><p class="approval-note">This loan is protected via the LoanBee Protect Plan. Tap to view cover and how to use the benefits.</p>`
+      : `<div class="journey-explain"><b>No protection selected</b><p>You chose to continue without the LoanBee Protect Plan.</p></div>`;
+  }
+  renderFooter();
+  $('#scroll').scrollTop = 0;
+}
+
+const paOpt = p => (p.siOptions || []).find(o => o.si === state.paSI) || { si: p.cover, premium: p.premium };
+const priceOf = p => p.siOptions ? paOpt(p).premium : p.premium;
+const coverOf = p => p.siOptions ? fmtL(paOpt(p).si) + ' cover' : p.coverShort;
+const findItem = (kind, id) => kind === 'vas' ? state.result.vas.find(v => v.id === id) : state.result.products.find(x => x.id === id);
+const selectedBundleFee = () => SymboCheckoutEngine.bundleFee(state.result, state.added, state.paSI);
+const hasSelectedInsurance = () => state.result.products.some(p => state.added[p.id]);
+const bundledService = () => hasSelectedInsurance() ? state.result.vas[0] || null : null;
+const selectedBundleKey = () => { const p = state.result.products.find(x => state.added[x.id]); return p ? `${p.id}:${p.id === 'pa' ? paOpt(p).rateId : p.rateId}:${selectedBundleFee()}` : null; };
+
+function chosen() {
+  const r = state.result; if (!r) return [];
+  const fee = selectedBundleFee(); let charged = false;
+  return r.products.filter(x => state.added[x.id]).map(x => ({ kind: 'insurance', id: x.id, name: x.name, cover: coverOf(x), term: x.termMonths + ' months', price: priceOf(x) }))
+    .concat(r.vas.filter(v => state.vasAdded[v.id]).map(v => { const price = charged ? 0 : fee; charged = true; return { kind: 'service', id: v.id, name: v.name, cover: v.desc, term: v.validity, price }; }));
+}
+function totals() {
+  const c = chosen();
+  const ins = c.filter(i => i.kind === 'insurance').reduce((s, i) => s + i.price, 0), svc = c.filter(i => i.kind === 'service').reduce((s, i) => s + i.price, 0);
+  return { ins: SymboCheckoutEngine.round2(ins), svc: SymboCheckoutEngine.round2(svc), all: SymboCheckoutEngine.round2(ins + svc), n: c.length };
+}
+
+function sideHTML(kind, id, name, price, on, sub, canAdd = true) {
+  return `<div class="row-side">
+    <span class="row-p" data-premium>${price == null ? '—' : fmtINR(price)}${sub ? `<small>${sub}</small>` : ''}</span>
+    ${on ? `<span class="added"><i class="ph-bold ph-check" aria-hidden="true"></i>Added</span><button type="button" class="rm" data-action="remove" data-kind="${kind}" data-id="${id}" data-fk="rm-${id}" aria-label="Remove ${esc(name)}">Remove</button>`
+         : `<button type="button" class="add" data-action="add" data-kind="${kind}" data-id="${id}" data-fk="add-${id}" data-consent="open" ${canAdd ? '' : 'disabled'} aria-label="${canAdd ? `Add ${esc(name)}, ${fmtINR(price)}` : 'Choose insurance first'}"><i class="ph-bold ph-plus" aria-hidden="true"></i>${canAdd ? 'Add' : 'Cover first'}</button>`}
+  </div>`;
+}
+
+function productRow(p, isNew) {
+  const on = !!state.added[p.id];
+  const si = p.siOptions ? `<div class="si" role="radiogroup" aria-label="Personal Accident sum insured" data-si-selector>
+    ${p.siOptions.map(o => { const c = o.si === state.paSI; return `<button type="button" class="sip" role="radio" aria-checked="${c}" tabindex="${c ? 0 : -1}" data-action="set-si" data-si="${o.si}" data-fk="si-${o.si}">${o.si === p.suggestedSI ? '<span class="sg">Suggested</span>' : ''}${fmtL(o.si)}<small>${fmtINR(o.premium)}</small></button>`; }).join('')}
+  </div>` : '';
+  return `<li class="row${on ? ' on' : ''}${isNew ? ' new' : ''}" data-product-id="${p.id}">
+    <span class="row-ic" aria-hidden="true"><i class="ph ${p.icon}"></i></span>
+    <div>
+      <div class="row-n">${p.name}<button type="button" class="info" data-action="info" data-kind="product" data-id="${p.id}" data-fk="info-${p.id}" aria-label="View benefits and terms for ${p.name}"><span>i</span></button></div>
+      <div class="row-m" data-cover>${coverOf(p)} · ${p.termMonths}-month policy</div>
+      <div class="row-w">${esc(p.why)}</div>
+    </div>
+    ${sideHTML('product', p.id, p.name, priceOf(p), on, 'reference · incl. GST')}
+    ${si}
+  </li>`;
+}
+function vasRow(v, isNew) {
+  const on = !!state.vasAdded[v.id];
+  const included = bundledService()?.id === v.id && on;
+  const fee = selectedBundleFee();
+  const first = !Object.values(state.vasAdded).some(Boolean);
+  return `<li class="row svc${on ? ' on bundled' : ''}${isNew ? ' new' : ''}" data-vas-id="${v.id}">
+    <span class="row-ic" aria-hidden="true"><i class="ph ${v.icon}"></i></span>
+    <div>
+      <div class="row-n">${v.name}<button type="button" class="info" data-action="info" data-kind="vas" data-id="${v.id}" data-fk="info-${v.id}" aria-label="What's included in ${v.name}"><span>i</span></button></div>
+      <div class="row-m">${included ? 'Included with LoanBee Protect Plan' : 'Additional value-add option'} · ${v.validity}</div>
+      <div class="row-w">${esc(v.why)}</div>
+    </div>
+    ${included ? `<div class="row-side"><span class="added">Bundled</span><small>Included in plan</small></div>` : sideHTML('vas', v.id, v.name, fee == null ? null : first ? fee : 0, on, fee == null ? 'choose cover first' : first ? 'reference bundle · once' : 'included in bundle', fee != null)}
+  </li>`;
+}
+
+function moduleHTML(prev) {
+  const r = state.result; if (!r) return '';
+  const t = totals();
+  const prevIds = prev ? prev.products.map(x => x.id) : null, prevV = prev ? prev.vas.map(v => v.id) : null;
+  const prevPa = prev && prev.products.find(x => x.id === 'pa');
+  const from = Math.min(...r.products.map(priceOf));
+  const sub = t.n ? `${t.n} added · ${fmtINR(t.all)}` : r.products.length ? `${r.products.length} picks for your profile · from ${fmtINR(from)}` : 'Nothing suggested';
+  return `
+    <button type="button" class="sy-h" data-action="toggle-module" aria-expanded="${state.moduleOpen}" aria-controls="sy-body" data-fk="sy-h">
+      <span class="sy-ic" aria-hidden="true"><i class="ph-fill ph-shield-check"></i></span>
+      <span class="sy-ht"><span class="sy-t">LoanBee Protect</span><span class="sy-s">${sub}</span></span>
+      ${t.n ? '<span class="sy-on"><i class="ph-bold ph-check" aria-hidden="true"></i>Protected</span>' : ''}
+      <span class="chev"></span>
+    </button>
+    <div id="sy-body" ${state.moduleOpen ? '' : 'hidden'}>
+      ${state.notice ? '<p class="sy-note" role="status">Your details changed, so options updated. Please review again.</p>' : ''}
+      <ul class="rows" data-product-list>${r.products.map(p => productRow(p, prev && (!prevIds.includes(p.id) || (p.id === 'pa' && prevPa && prevPa.suggestedSI !== p.suggestedSI)))).join('')}</ul>
+      ${r.vas.length ? `<details class="vas" data-vas-section ${state.vasOpen || hasSelectedInsurance() ? 'open' : ''}>
+        <summary data-fk="vas-sum"><span class="vas-t">Bundled service &amp; more options</span><span class="mini">${r.vas.length}</span><span class="chev"></span></summary>
+        <ul class="rows">${r.vas.map(v => vasRow(v, prev && !prevV.includes(v.id))).join('')}</ul>
+      </details>` : ''}
+      ${t.n ? `<div class="tot" data-totals><div><span>Protection total</span><br><span data-total="split">Insurance <span data-total="insurance">${fmtINR(t.ins)}</span> · Value-adds <span data-total="vas">${fmtINR(t.svc)}</span></span></div><b data-total="optional">${fmtINR(t.all)}</b></div>` : ''}
+      <div class="pw">Protection options powered by <img src="${SYMBO_LOGO}" alt="Symbo"></div>
+    </div>`;
+}
+
+let swapTimer = null;
+function renderModule({ animate = false, prev = null } = {}) {
+  const m = $('#insurance-module');
+  const fk = document.activeElement && m.contains(document.activeElement) ? document.activeElement.dataset.fk : null;
+  const paint = () => {
+    m.innerHTML = moduleHTML(prev); m.classList.toggle('on', totals().n > 0);
+    const d = $('[data-vas-section]', m); if (d) d.addEventListener('toggle', () => { state.vasOpen = d.open; });
+    if (fk) { const el = $(`[data-fk="${fk}"]`, m); if (el) el.focus({ preventScroll: true }); }
+  };
+  if (!animate) { clearTimeout(swapTimer); m.classList.remove('updating'); paint(); return; }
+  m.classList.add('updating'); clearTimeout(swapTimer);
+  swapTimer = setTimeout(() => { paint(); m.classList.remove('updating'); }, 120);
+}
+
+function renderFooter() {
+  const f = $('#foot'), t = totals(), d = state.decision;
+  if (state.phoneView === 'sanctioned') { f.innerHTML = `<div class="foot-b"><button type="button" class="cta" data-action="approval-cta">${d?.type === 'accepted' ? 'View my protected loan' : 'View my loan'}</button></div>`; return; }
+  if (t.n) {
+    f.innerHTML = `<div class="foot-l"><span>Optional protection total</span><b>${fmtINR(t.all)}</b></div>
+      <div class="foot-b"><button type="button" class="cta-2" data-action="decline" data-consent="decline">Skip protection</button><button type="button" class="cta" data-action="checkout" data-consent="checkout">Complete checkout</button></div>`;
+  } else {
+    f.innerHTML = `<div class="foot-b"><button type="button" class="cta" data-action="decline" data-consent="decline">Complete checkout</button></div>`;
+  }
+}
+
+/* ---------- Sheets ---------- */
+function openSheet(s, opener) { state.sheet = s; state.sheetOpener = opener ? opener.dataset.fk : null; renderSheet(); }
+function closeSheet() {
+  state.sheet = null; $('#sheet-root').innerHTML = '';
+  const el = state.sheetOpener && $(`[data-fk="${state.sheetOpener}"]`); if (el) el.focus({ preventScroll: true });
+}
+function renderSheet() {
+  const s = state.sheet, root = $('#sheet-root'); if (!s) { root.innerHTML = ''; return; }
+  let h = '';
+  const head = (k, t) => `<div class="grip"></div><div class="sh-h"><div><div class="sh-k">${k}</div><h2 class="sh-t" id="sh-title">${t}</h2></div><button type="button" class="sh-x" data-action="close-sheet" aria-label="Close">×</button></div>`;
+  if (s.type === 'info' || s.type === 'consent') {
+    const it = findItem(s.kind, s.id); if (!it) { closeSheet(); return; }
+    const ins = s.kind !== 'vas', price = ins ? priceOf(it) : Object.values(state.vasAdded).some(Boolean) ? 0 : (selectedBundleFee() ?? 0);
+    const meta = ins ? `<dl class="sh-meta"><div><dt>Cover</dt><dd>${coverOf(it)}</dd></div><div><dt>Policy term</dt><dd>${it.termMonths} months</dd></div><div><dt>Reference premium incl. GST</dt><dd>${fmtINR(price)}</dd></div></dl>`
+                     : `<dl class="sh-meta two"><div><dt>Validity</dt><dd>${it.validity}</dd></div><div><dt>${price ? 'Reference VAS bundle fee incl. GST' : 'Additional service fee'}</dt><dd>${fmtINR(price)}</dd></div></dl>`;
+    if (s.type === 'info') {
+      h = head(ins ? 'Insurance · partner insurer' : 'Value-add service', it.name) + `<div class="sh-b">${meta}
+        <p style="font-size:13px">${it.desc}</p>
+        ${ins ? `<h3>What's covered</h3><ul>${it.benefits.map(b => `<li>${b}</li>`).join('')}</ul><h3>Not covered</h3><ul>${it.exclusions.map(b => `<li>${b}</li>`).join('')}</ul>
+        <p class="sh-fine">Policy term is separate from your ${state.profile.tenure}-month loan. Summary only, policy wording applies.</p>`
+        : '<p class="sh-fine">Value-add service by a partner provider. One VAS bundle fee applies to the selected insurance rate-card row, regardless of service count.</p>'}
+      </div><div class="sh-f"><button type="button" class="btn btn-ghost btn-lg" data-action="close-sheet">Close</button></div>`;
+    } else {
+      const paired = ins ? state.result.vas[0] : null;
+      h = head(ins ? 'LoanBee Protect · your choice' : 'Value-add · your choice', `Add ${it.name}?`) + `<div class="sh-b">${meta}
+        <ul>${(ins ? it.benefits.slice(0, 2).concat(['Not covered: ' + it.exclusions[0].toLowerCase()]) : [it.desc, 'Value-add service by a partner provider']).map(b => `<li>${b}</li>`).join('')}</ul>
+        ${paired ? `<div class="journey-explain"><b>Bundled with this cover: ${esc(paired.name)}</b><p>One relevant value-added service is included in the LoanBee Protect Plan. Reference service bundle fee: ${fmtINR(selectedBundleFee() ?? it.vasFee ?? 0)}. You can review more service options at checkout.</p></div>` : ''}
+        <p class="sh-fine">No payment is taken in this demo. ${ins ? 'Insurance free-look rights are subject to the issued policy. Insurance and the bundled service are shown separately in the price summary.' : 'Additional services are optional. The source rate card has one bundle fee, not per-service prices. Provider terms apply.'}</p>
+      </div><div class="sh-f">
+        <button type="button" class="btn btn-primary btn-lg" data-action="confirm-add" data-consent="confirm" data-kind="${s.kind}" data-id="${s.id}">I agree, add${ins && paired ? ' cover + bundled service' : price ? ' for ' + fmtINR(price) : ' at no extra charge'}</button>
+        <button type="button" class="btn btn-ghost btn-lg" data-action="close-sheet">Go back</button>
+      </div>`;
+    }
+  } else if (s.type === 'guide') {
+    const items = chosen(), products = items.length ? state.result.products.filter(x => state.added[x.id]) : state.result.products;
+    const services = items.length ? state.result.vas.filter(v => state.vasAdded[v.id]) : state.result.vas;
+    h = head('LoanBee Protect Plan', items.length ? 'Your protection details' : 'How protection would work') + `<div class="sh-b"><p class="sh-fine">${items.length ? 'The customer selected these items in this browser demo.' : 'Review the recommendations first. Nothing has been selected or issued.'}</p><h3>Insurance cover</h3><ul>${products.map(x => `<li><b>${esc(x.name)}</b> · ${coverOf(x)} · ${x.termMonths}-month policy<br><span class="mini">${esc(x.desc)}</span></li>`).join('') || '<li>No insurance selected.</li>'}</ul><h3>Bundled value-added service</h3><ul>${services.map(v => `<li>${esc(v.name)}${v.id === bundledService()?.id ? ' · included with cover' : ' · added by customer'}</li>`).join('') || '<li>No services selected.</li>'}</ul>${services.length ? `<p class="sh-fine">Reference VAS bundle fee applies once: ${fmtINR(items.length ? selectedBundleFee() ?? 0 : SymboCheckoutEngine.indicativeBundleFee(state.result) ?? 0)}.</p>` : ''}<h3>How to avail the benefits</h3><ol><li>In a live journey, complete the separate insurance consent and payment steps.</li><li>After issuance, use the insurer’s policy document for cover, exclusions and claim contact details.</li><li>For selected value-added services, follow the provider’s activation instructions sent after enrolment.</li></ol><p class="sh-fine">This demo does not issue a policy, activate services or create a claim.</p></div><div class="sh-f"><button type="button" class="btn btn-dark btn-lg" data-action="close-sheet">Back to journey</button></div>`;
+  } else if (s.type === 'skip-confirm') {
+    h = head('Before you continue', 'Proceed without protection?') + `<div class="sh-b"><p>Your loan will proceed without the LoanBee Protect Plan. Insurance and value-added services will not be added.</p><p class="sh-fine">Your loan offer is independent of this optional protection choice.</p></div><div class="sh-f"><button type="button" class="btn btn-dark btn-lg" data-action="confirm-decline">Yes, continue without protection</button><button type="button" class="btn btn-ghost btn-lg" data-action="close-sheet">Review protection</button></div>`;
+  } else if (s.type === 'record') {
+    const d = state.decision;
+    h = head('Demo decision recorded', d.type === 'accepted' ? 'Selection recorded' : 'No protection added') + `<div class="sh-b">
+      ${d.type === 'accepted' ? `<ul class="rec" data-decision="accepted">${d.items.map(i => `<li><span>${i.name}<small>${i.kind === 'insurance' ? 'Insurance · ' + i.cover : 'Value-add service'}</small></span><b>${fmtINR(i.price)}</b></li>`).join('')}</ul>
+        <div class="tot" style="margin:8px -18px 0;border-top:1px solid var(--line)"><span>Reference total · no payment taken</span><b>${fmtINR(d.total)}</b></div>`
+      : '<p style="font-size:13px" data-decision="declined">Nothing was charged. You can add cover later from My loan.</p>'}
+      <p class="sh-fine mono">Ref ${d.recommendationId} · ${fmtTime(d.at)}</p>
+    </div><div class="sh-f">
+      ${d.type === 'accepted' ? '<button type="button" class="btn btn-ghost btn-lg" data-action="bundle-guide">Protection details & how to use</button>' : ''}
+      <button type="button" class="btn btn-dark btn-lg" data-action="esign">View sanctioned loan</button>
+      <button type="button" class="btn btn-ghost btn-lg" data-action="close-sheet">Back to checkout</button>
+    </div>`;
+  }
+  root.innerHTML = `<div class="sheet-wrap" data-action="sheet-bg"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-title">${h}</div></div>`;
+  const x = $('.sh-x', root); if (x) x.focus();
+}
+function toast(msg) { const r = $('#toast-root'); r.innerHTML = `<div class="toast" role="status">${esc(msg)}</div>`; clearTimeout(toast.t); toast.t = setTimeout(() => { r.innerHTML = ''; }, 2400); }
+
+/* =====================================================================
+   6. PRESENTER UI: presets, levers, outcome, evidence
+   ===================================================================== */
+function ctlHTML(k, kind) {
+  const m = FIELD_META[k], id = 'c-' + k, lab = `<span class="ctl-l" id="${id}-l">${m.label}</span>`;
+  if (kind === 'text') return `<div class="ctl">${lab}<input class="in" data-field="${k}" aria-labelledby="${id}-l" autocomplete="off"></div>`;
+  if (kind === 'number') return `<div class="ctl">${lab}<input class="in" type="number" data-field="${k}" aria-labelledby="${id}-l" min="${m.min}" max="${m.max}" style="width:110px"></div>`;
+  if (kind === 'select') return `<div class="ctl">${lab}<select class="in" data-field="${k}" aria-labelledby="${id}-l">${m.options.map(o => `<option>${o}</option>`).join('')}</select></div>`;
+  if (kind === 'seg') return `<div class="ctl">${lab}<div class="seg" role="radiogroup" aria-labelledby="${id}-l" data-field="${k}">${m.options.map(o => `<button type="button" role="radio" data-value="${o}">${k === 'tenure' ? o + 'm' : o}</button>`).join('')}</div></div>`;
+  if (kind === 'switch') return `<div class="ctl">${lab}<button type="button" class="tg" role="switch" data-field="${k}" aria-labelledby="${id}-l"></button></div>`;
+  if (kind === 'stepper') return `<div class="ctl">${lab}<div class="stp" data-stepper="${k}" role="group" aria-labelledby="${id}-l"><button type="button" data-delta="-1" aria-label="Decrease ${m.label}">−</button><output data-display="${k}"></output><button type="button" data-delta="1" aria-label="Increase ${m.label}">+</button></div></div>`;
+  if (kind === 'range') return `<div class="ctl">${lab}<span class="ctl-v" data-display="${k}"></span><input class="rng" type="range" data-field="${k}" min="${m.min}" max="${m.max}" step="${m.step}" aria-labelledby="${id}-l"></div>`;
+}
+function buildLevers() {
+  $('#lever-groups').innerHTML = LEVER_GROUPS.map((g, i) => `<details class="card lv" data-group="${i}">
+    <summary><span class="lv-txt"><span class="lv-t">${g.title}</span><span class="lv-s" data-group-sum="${i}"></span></span><span class="chev"></span></summary>
+    <div class="lv-body">${g.fields.map(([k, t]) => ctlHTML(k, t)).join('')}</div></details>`).join('');
+}
+const presetOutcome = {};
+function renderPresets() {
+  $('#presets').innerHTML = Object.keys(PRESETS).map(id => {
+    const pr = PRESETS[id], on = state.activePreset === id;
+    if (!presetOutcome[id]) { const pp = Object.assign({}, pr.profile); pp.emi = calcEmi(pp.loanAmount, LOAN_RATES[pp.loanType], pp.tenure); presetOutcome[id] = SymboCheckoutEngine.recommend(pp); }
+    const r = presetOutcome[id];
+    return `<div class="pr-item"><button type="button" class="pr" data-action="preset" data-preset="${id}" aria-pressed="${on}" data-fk="pr-${id}"><span class="pr-k">${id}</span><span class="pr-n">${esc(pr.profile.name)}<span class="pr-who"> · ${pr.label}</span></span></button>${on ? `<div class="pr-d"><p>${esc(pr.blurb)}</p><div class="chips">${r.products.map(x => `<span class="chip">${esc(x.short)}</span>`).join('')}${r.vas.length ? `<span class="chip svc">${r.vas.length} relevant service${r.vas.length > 1 ? 's' : ''}</span>` : ''}</div></div>` : ''}</div>`;
+  }).join('') + `<div class="pr-item"><button type="button" class="pr" data-action="custom-persona" aria-pressed="${state.mode === 'custom'}" data-fk="pr-custom"><span class="pr-k">+</span><span class="pr-n">Build your own persona<span class="pr-who"> · test customer</span></span></button></div>`;
+  $('#custom-levers').hidden = state.mode !== 'custom';
+  const el = state.focusPreset && $(`[data-fk="${state.focusPreset}"]`); if (el) { el.focus({ preventScroll: true }); state.focusPreset = null; }
+}
+
+function syncInputs(skip) {
+  const p = state.profile;
+  $$('input[data-field], select[data-field]').forEach(el => { if (el !== skip) el.value = p[el.dataset.field]; });
+  $$('[role=radiogroup][data-field]').forEach(g => { const v = String(p[g.dataset.field]); $$('[role=radio]', g).forEach(b => { const on = b.dataset.value === v; b.setAttribute('aria-checked', on); b.tabIndex = on ? 0 : -1; }); });
+  $$('[role=switch][data-field]').forEach(s => s.setAttribute('aria-checked', !!p[s.dataset.field]));
+  $$('[data-display]').forEach(el => { const k = el.dataset.display; el.textContent = (k === 'loanAmount' || k === 'emi' || k === 'monthlyIncome') ? fmtINR(p[k]) : p[k]; });
+  LEVER_GROUPS.forEach((g, i) => { const s = $(`[data-group-sum="${i}"]`); if (s) s.textContent = g.sum(p); });
+}
+
+function renderChangeRecords() {
+  const labels = { profile: 'Customer signal', recommendation: 'Recommendation updated', consent: 'Customer choice', terms: 'Details viewed', selection: 'Cover changed', decision: 'Checkout decision', loan: 'Loan journey' };
+  $('#change-list').innerHTML = state.events.slice(0, 12).map(e => {
+    const message = e.type === 'recommendation' ? e.text.replace(/^[^:]+:\s*/, '') : e.text;
+    return `<li><time>${fmtTime(e.at)}</time><strong>${labels[e.type] || 'Activity'}</strong><span>${esc(message)}</span></li>`;
+  }).join('') || '<li>No changes recorded yet.</li>';
+}
+function renderOutcome() {
+  const r = state.result, d = state.diff, dec = state.decision;
+  $('#wc-line').textContent = d ? d.changedAny ? d.headline.replace('Customer changed → ', '') : 'Customer signal changed; the recommendation remains the same.' : `${state.profile.name} is the active customer.`;
+  $('#wc-time').textContent = d ? fmtClock(d.at) : '';
+  if (d && d.changedAny) {
+    const before = d.before.products.map(x => x.name).join(' + ') || 'No insurance';
+    const after = d.after.products.map(x => x.name).join(' + ') || 'No insurance';
+    $('#wc-ba').innerHTML = `<span class="ba-k">Before</span><span>${esc(before)}</span><span class="ba-k">Now</span><b>${esc(after)}</b>`;
+    $('#wc-body').innerHTML = `<p class="mini" style="margin-top:10px">If every suggestion were added: ${fmtINR(d.totalBefore)} → <b>${fmtINR(d.totalAfter)}</b></p><ul class="why">${d.reasons.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`;
+    const c = $('#what-changed'); c.classList.remove('flash'); void c.offsetWidth; c.classList.add('flash');
+  } else {
+    $('#wc-ba').innerHTML = `<span class="ba-k">Showing</span><b>${esc(state.profile.name)}</b>`;
+    const latest = state.events.find(e => e.type === 'profile');
+    $('#wc-body').innerHTML = `<p class="mini" style="margin-top:9px">${latest ? esc(latest.text) : 'Select another persona, or build your own to see the offer change.'}</p>`;
+  }
+  $('#sl-status').innerHTML = dec ? (dec.type === 'accepted' ? '<span class="badge b-green">Chosen</span>' : '<span class="badge b-plain">Skipped</span>') : state.notice ? '<span class="badge b-review">Review</span>' : '<span class="badge b-plain">Optional</span>';
+  $('#sl-sum').textContent = `${r.products.length} insurance · ${r.vas.length} services · ${fmtINR(proposedTotal(r))} if all added`;
+  $('#sl-body').innerHTML = r.products.map(x => `<div class="sl"><span><b>${esc(x.name)}</b><span class="rec-reason">${esc(x.reason)}</span><span class="mini">${coverOf(x)} · ${x.termMonths}-month policy</span></span><b>${fmtINR(priceOf(x))}</b></div>`).join('')
+    + (r.vas.length ? `<div class="sl"><span><b>Relevant value-add services</b><span class="rec-reason">${r.vas.map(v => esc(v.name)).join(' · ')}</span><span class="mini">Optional bundle fee charged once</span></span><b>${fmtINR(SymboCheckoutEngine.indicativeBundleFee(r) ?? 0)}</b></div>` : '')
+    + (r.notRecommended.length ? `<div class="sl"><span class="mini">Outside this shortlist</span><span class="mini" style="text-align:right">${r.notRecommended.map(n => esc(n.name)).join(', ')}</span></div>` : '');
+  renderChangeRecords();
+}
+
+function buildEvidence() {
+  const r = state.result, d = state.decision;
+  return {
+    label: 'Demo evidence generated in this browser. Not a production audit record or binding insurance quote.',
+    recommendationId: r.recommendationId, ruleVersion: r.ruleVersion, generatedAt: r.generatedAt,
+    shownAt: state.presentedAt ? state.presentedAt.toISOString() : null,
+    profileSignals: r.signals,
+    mappedEngineSignals: SymboCheckoutEngine.toCore(state.profile), assumptions: r.assumptions || [],
+    suitabilityScores: r.engineResult?.scores || [],
+    productsPresented: r.products.map(x => ({ id: x.id, name: x.name, rateCardId: x.id === 'pa' ? paOpt(x).rateId : x.rateId, coverShown: coverOf(x), policyTermMonths: x.termMonths, referencePremiumInclGst: priceOf(x), added: !!state.added[x.id] })),
+    servicesPresented: r.vas.map(v => ({ id: v.id, name: v.name, added: !!state.vasAdded[v.id] })),
+    vasBundle: { rule: 'primary-selected-rate-row-once', referenceFeeInclGst: selectedBundleFee() ?? SymboCheckoutEngine.indicativeBundleFee(r), selectedFeeInclGst: Object.values(state.vasAdded).some(Boolean) ? selectedBundleFee() : 0 },
+    notShortlisted: r.notRecommended,
+    customerAction: d ? { status: d.type, items: d.items.map(i => ({ name: i.name, kind: i.kind, price: i.price })), total: d.total, at: d.at.toISOString() } : { status: state.notice ? 'pending (reset after quote change)' : 'pending', at: null },
+    events: state.events.map(e => ({ at: e.at.toISOString(), type: e.type, text: e.text }))
+  };
+}
+function renderEvidence() {
+  if (!state.result) return;
+  const ev = buildEvidence(), a = ev.customerAction;
+  $('#ev-sum').textContent = a.status === 'accepted' ? 'Customer chose protection' : a.status === 'declined' ? 'Customer skipped protection' : 'Choice pending';
+  const choices = state.events.filter(e => e.type === 'consent').slice(0, 8);
+  $('#ev-main').innerHTML = `<div class="evidence-status"><b>${a.status === 'accepted' ? 'Customer choice recorded' : a.status === 'declined' ? 'Customer chose to continue without protection' : 'Awaiting customer choice'}</b><span>${a.at ? `Recorded ${fmtTime(new Date(a.at))}` : 'No insurance or service is preselected. Each addition requires a separate customer action.'}</span></div><table class="ev-t"><tbody>
+    <tr><td class="mini">Recommendation ID</td><td class="mono" data-ev="recommendation-id">${ev.recommendationId}</td></tr>
+    <tr><td class="mini">Rule version</td><td class="mono" data-ev="rule-version">${ev.ruleVersion}</td></tr>
+    <tr><td class="mini">Shown</td><td>${ev.shownAt ? fmtTime(new Date(ev.shownAt)) : '-'}</td></tr>
+    <tr><td class="mini">Presented</td><td data-ev="products">${ev.productsPresented.map(x => `${esc(x.name)}: ${x.coverShown}, ${fmtINR(x.referencePremiumInclGst)}`).join('<br>')}${ev.servicesPresented.length ? '<br>' + ev.servicesPresented.map(v => `${esc(v.name)} (service)`).join('<br>') + `<br>VAS bundle once: ${fmtINR(ev.vasBundle.referenceFeeInclGst ?? 0)}` : ''}</td></tr>
+    <tr><td class="mini">Customer action</td><td data-ev="customer-action">${a.status === 'accepted' ? `Accepted ${a.items.length} · ${fmtINR(a.total)}` : a.status === 'declined' ? 'Declined, continued without' : a.status}</td></tr>
+    <tr><td class="mini">Timestamp</td><td data-ev="action-at">${a.at ? fmtTime(new Date(a.at)) : '-'}</td></tr>
+  </tbody></table><div class="over" style="margin-top:10px"><span>Consent activity</span></div><ul class="change-list">${choices.length ? choices.map(e => `<li><time>${fmtTime(e.at)}</time><span>${esc(e.text)}</span></li>`).join('') : '<li>No additions or removals yet.</li>'}</ul>`;
+  $('#ev-signals').innerHTML = `<table class="ev-t" data-ev="signals"><tbody>${ev.profileSignals.map(s => `<tr><td>${s.label}</td><td><b>${esc(fmtField(s.key, s.value))}</b></td><td class="mini">${s.source}</td></tr>`).join('')}</tbody></table>`;
+  $('#ev-log').innerHTML = state.events.map(e => `<li><span class="mono mini">${fmtClock(e.at)}</span><span>${esc(e.text)}</span></li>`).join('');
+}
+
+/* =====================================================================
+   7. EVENTS
+   ===================================================================== */
+const scopeOf = el => el.closest('#phone') ? 'phone' : 'console';
+function loadPreset(id) {
+  state.activePreset = id; state.mode = 'preset';
+  const pp = Object.assign({}, PRESETS[id].profile); pp.emi = calcEmi(pp.loanAmount, LOAN_RATES[pp.loanType], pp.tenure);
+  setProfile(pp, { source: 'preset', preset: id, force: true });
+}
+function afterChoice() { renderModule(); renderFooter(); renderOutcome(); renderEvidence(); }
+function reviewBundleChange(before) {
+  const after = selectedBundleKey();
+  if (before !== after && Object.values(state.vasAdded).some(Boolean)) {
+    state.vasAdded = {}; state.notice = true;
+    logEvent('consent', 'VAS selection returned to review because the selected insurance tier changed the bundle fee');
+  }
+}
+
+const ACTIONS = {
+  noop: () => {},
+  help: () => toast('LoanBee support is outside this demo.'),
+  preset: el => {
+    const id = el.dataset.preset; state.focusPreset = el.dataset.fk;
+    if (state.activePreset !== id) loadPreset(id);
+  },
+  'custom-persona': () => { if (state.mode === 'custom') return; state.mode = 'custom'; state.activePreset = 'custom'; setProfile({ name: 'Test Customer' }, { source: 'custom', force: true }); logEvent('profile', 'Custom persona mode selected'); renderPresets(); renderChangeRecords(); },
+  'phone-view': el => { if (el.dataset.view === 'checkout' || state.decision) { state.phoneView = el.dataset.view; renderPhoneView(); } },
+  'approval-cta': () => openSheet({ type: 'guide' }),
+  'bundle-guide': el => openSheet({ type: 'guide' }, el),
+  'toggle-module': () => { state.moduleOpen = !state.moduleOpen; renderModule(); },
+  info: el => { logEvent('terms', `Viewed terms: ${findItem(el.dataset.kind, el.dataset.id).name}`); openSheet({ type: 'info', kind: el.dataset.kind, id: el.dataset.id }, el); renderEvidence(); renderChangeRecords(); },
+  add: el => {
+    if (el.dataset.kind === 'vas' && selectedBundleFee() == null) { toast('Choose an insurance cover first to see the VAS bundle fee.'); return; }
+    openSheet({ type: 'consent', kind: el.dataset.kind, id: el.dataset.id }, el);
+  },
+  'confirm-add': el => {
+    const k = el.dataset.kind, id = el.dataset.id, it = findItem(k, id);
+    const before = selectedBundleKey();
+    const itemPrice = k === 'vas' ? Object.values(state.vasAdded).some(Boolean) ? 0 : selectedBundleFee() : priceOf(it);
+    (k === 'vas' ? state.vasAdded : state.added)[id] = true;
+    state.decision = null; state.notice = false;
+    if (k !== 'vas') reviewBundleChange(before);
+    if (k !== 'vas' && state.result.vas[0]) state.vasAdded[state.result.vas[0].id] = true;
+    logEvent('consent', `Consent given: ${it.name}${k !== 'vas' && state.result.vas[0] ? ' + bundled ' + state.result.vas[0].name : ''} · ${fmtINR(itemPrice)}`);
+    state.sheetOpener = 'rm-' + id; closeSheet(); afterChoice();
+    const b = $(`[data-fk="rm-${id}"]`); if (b) b.focus({ preventScroll: true });
+  },
+  remove: el => {
+    const k = el.dataset.kind, id = el.dataset.id;
+    const before = selectedBundleKey();
+    (k === 'vas' ? state.vasAdded : state.added)[id] = false; state.decision = null;
+    if (k !== 'vas' && !hasSelectedInsurance()) state.vasAdded = {};
+    if (k !== 'vas') reviewBundleChange(before);
+    logEvent('consent', `Removed: ${findItem(k, id).name}`);
+    afterChoice(); const b = $(`[data-fk="add-${id}"]`); if (b) b.focus({ preventScroll: true });
+  },
+  'set-si': el => {
+    const si = Number(el.dataset.si); if (si === state.paSI) return;
+    const before = selectedBundleKey();
+    state.paSI = si; logEvent('selection', `PA sum insured set to ${fmtLakh(si)}`);
+    if (state.added.pa) { state.added.pa = false; state.decision = null; reviewBundleChange(before); afterChoice(); openSheet({ type: 'consent', kind: 'product', id: 'pa' }, el); }
+    else afterChoice();
+  },
+  checkout: () => {
+    const items = chosen();
+    state.decision = { type: 'accepted', items, total: totals().all, at: new Date(), recommendationId: state.result.recommendationId };
+    logEvent('decision', `Checkout with protection: ${items.map(i => i.name).join(', ')} · ${fmtINR(state.decision.total)}`);
+    // Browser demo only: no payment, issuance or server-side audit POST occurs.
+    state.notice = false; afterChoice(); ACTIONS.esign();
+  },
+  decline: el => openSheet({ type: 'skip-confirm' }, el),
+  'confirm-decline': () => {
+    state.added = {}; state.vasAdded = {}; state.notice = false;
+    state.decision = { type: 'declined', items: [], total: 0, at: new Date(), recommendationId: state.result.recommendationId };
+    logEvent('decision', 'Continued without protection');
+    afterChoice(); ACTIONS.esign();
+  },
+  esign: () => { logEvent('loan', 'Checkout completed in demo'); if (state.sheet) closeSheet(); state.phoneView = 'sanctioned'; renderPhoneView(); renderEvidence(); renderChangeRecords(); toast('Loan approved in demo. No loan was disbursed.'); },
+  'close-sheet': () => closeSheet(),
+  'sheet-bg': (el, e) => { if (e.target === el) closeSheet(); },
+  'copy-evidence': () => {
+    const txt = JSON.stringify(buildEvidence(), null, 2);
+    (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast('Evidence JSON copied'), () => { console.log(txt); toast('Clipboard blocked. JSON logged to console.'); });
+  },
+  drawer: el => { const id = el.dataset.drawer; $$('.side').forEach(s => s.classList.toggle('open', s.id === id)); $('#scrim').classList.add('open'); },
+  'close-drawers': () => { $$('.side').forEach(s => s.classList.remove('open')); $('#scrim').classList.remove('open'); }
+};
+
+document.addEventListener('click', e => {
+  const radio = e.target.closest('[role=radio][data-value]'), g = radio && radio.closest('[role=radiogroup][data-field]');
+  if (g) { setProfile({ [g.dataset.field]: parseVal(g.dataset.field, radio.dataset.value) }, { source: scopeOf(g) }); return; }
+  const sw = e.target.closest('[role=switch][data-field]');
+  if (sw) { setProfile({ [sw.dataset.field]: !state.profile[sw.dataset.field] }, { source: scopeOf(sw) }); return; }
+  const st = e.target.closest('[data-stepper] [data-delta]');
+  if (st) { const k = st.closest('[data-stepper]').dataset.stepper; setProfile({ [k]: state.profile[k] + Number(st.dataset.delta) }, { source: scopeOf(st) }); return; }
+  const act = e.target.closest('[data-action]');
+  if (act && ACTIONS[act.dataset.action] && !act.disabled) ACTIONS[act.dataset.action](act, e);
+});
+document.addEventListener('input', e => {
+  const el = e.target;
+  if (el.matches('input[data-field]')) { const k = el.dataset.field; if (el.type === 'number' && el.value === '') return; setProfile({ [k]: parseVal(k, el.value) }, { source: scopeOf(el) }); }
+});
+document.addEventListener('change', e => {
+  const el = e.target;
+  if (el.matches('select[data-field]')) setProfile({ [el.dataset.field]: el.value }, { source: scopeOf(el) });
+  if (el.matches('input[type=number][data-field]')) syncInputs(null);
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { if (state.sheet) closeSheet(); else ACTIONS['close-drawers'](); return; }
+  const r = e.target.closest && e.target.closest('[role=radio]');
+  if (!r || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
+  const list = $$('[role=radio]', r.closest('[role=radiogroup]')).filter(b => !b.disabled);
+  const n = list[(list.indexOf(r) + (e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : -1) + list.length) % list.length];
+  e.preventDefault(); n.click();
+  const t = n.dataset.fk ? $(`[data-fk="${n.dataset.fk}"]`) : n; if (t) t.focus();
+});
+document.addEventListener('focusin', e => {
+  const sh = state.sheet && $('#sheet-root .sheet');
+  if (sh && !sh.contains(e.target)) { const x = $('.sh-x', sh); if (x) x.focus(); }
+});
+
+/* =====================================================================
+   8. PUBLIC INTEGRATION HOOKS (stable)
+   window.LoanBeeDemo.setProfile(patch)    merge a partial profile, recompute, render
+   window.LoanBeeDemo.renderResult(result) render a suitability + pricing response
+   ===================================================================== */
+window.LoanBeeDemo = {
+  setProfile: patch => { state.mode = 'custom'; setProfile(patch || {}, { source: 'api' }); },
+  renderResult: result => { state.baseline = state.result; renderResult(result, { source: 'api' }); },
+  getProfile: () => Object.assign({}, state.profile),
+  getResult: () => state.result,
+  getEvidence: () => buildEvidence(),
+  loadPreset: id => PRESETS[id] && loadPreset(id),
+  suitabilityEngine: SymboCheckoutEngine, presets: PRESETS
+};
+
+/* ---------- init ---------- */
+const SYMBO_LOGO = $('#symbo-logo').src;
+buildLevers();
+syncInputs(null);
+renderLoan(false);
+renderResult(SymboCheckoutEngine.recommend(state.profile), { source: 'init' });
+</script>
+</body>
+</html>

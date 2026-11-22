@@ -79,6 +79,17 @@ export function signals(id, ans, loan) {
   return s;
 }
 
+/* Two- or three-word reasons for the recommendation card. */
+export function tags(id, ans) {
+  const t = [];
+  if (id === 'pa') { if (ans.dependants && ans.dependants !== 'None') t.push(`${ans.dependants} dependants`); if (risky(ans)) t.push(ans.travel.startsWith('Daily') ? 'Daily two-wheeler' : 'Frequent travel'); if (ans.lifeCover === 'No') t.push('No life cover'); if (ans.lifeCover === 'Some, not enough') t.push('Life cover short'); }
+  if (id === 'emi') { if (['It would be difficult', 'Not sure'].includes(ans.hospitalEmi)) t.push('EMI at risk in hospital'); if (ans.jobSecurity === 'Less than 2 months') t.push('Under 2 months savings'); if (ans.jobSecurity === '2 to 6 months') t.push('Thin savings'); }
+  if (id === 'hospicash') { if (ans.health === 'None') t.push('No health cover'); if (ans.health === 'Employer cover only') t.push('Employer cover only'); }
+  if (id === 'wellness' && ans.wellness === 'Yes') t.push('Wants teleconsults');
+  if (id === 'cardsafe' && ans.digital === 'Yes') t.push('UPI and card user');
+  return t;
+}
+
 export function assess(loan, ans) {
   const f = firstName(loan.name);
   const salaried = loan.occ === 'Salaried';

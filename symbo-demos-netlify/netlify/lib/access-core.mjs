@@ -8,14 +8,16 @@ export const TEAM_HOURS = 12;
 
 /* Every gated demo. `prefixes` decide which demo a request belongs to.
    Add a row here when a new demo ships; guests can only open demos listed on their invite. */
+/* Order here is the order on the hub and in the session menu. `hidden` keeps a demo reachable and invitable
+   but out of the team's menu (older builds). */
 export const DEMOS = [
-  { id: 'widget', name: 'Embedded widget · LoanBee checkout', home: '/demos/loanbee-checkout/', prefixes: ['/demos/loanbee-checkout'] },
-  { id: 'creditlife', name: 'Credit Life journey', home: '/demos/suitability-agent-journey/', prefixes: ['/demos/suitability-agent-journey'] },
-  { id: 'agentjourney', name: 'Agent journey · store & bank portals', home: '/demos/agent-journey/', prefixes: ['/demos/agent-journey', '/api/journey'] },
-  { id: 'agent', name: 'Agent journey · consumer durables (earlier build)', home: '/demos/agent-suitaibility-demo/', prefixes: ['/demos/agent-suitaibility-demo', '/demos/agent-suitability-demo'] },
-  { id: 'engine', name: 'Suitability engine', home: '/demos/suitabilityengine/', prefixes: ['/demos/suitabilityengine'] },
+  { id: 'engine', name: 'Suitability in action', home: '/demos/suitabilityengine/', prefixes: ['/demos/suitabilityengine'] },
+  { id: 'widget', name: 'Embedded widget journey', home: '/demos/loanbee-checkout/', prefixes: ['/demos/loanbee-checkout'] },
+  { id: 'agentjourney', name: 'Agent journey', home: '/demos/agent-journey/', prefixes: ['/demos/agent-journey', '/api/journey'] },
   { id: 'motor', name: 'Motor agent journey', home: '/demos/motor/', prefixes: ['/demos/motor'] },
-  { id: 'pet', name: 'Pet insurance', home: '/demos/pet-insurance/', prefixes: ['/demos/pet-insurance', '/api/health', '/api/premium', '/api/otp', '/api/payment'] }
+  { id: 'pet', name: 'Pet insurance journey', home: '/demos/pet-insurance/', prefixes: ['/demos/pet-insurance', '/api/health', '/api/premium', '/api/otp', '/api/payment'] },
+  { id: 'creditlife', name: 'Credit Life journey (earlier build)', home: '/demos/suitability-agent-journey/', prefixes: ['/demos/suitability-agent-journey'], hidden: true },
+  { id: 'agent', name: 'Agent journey · consumer durables (earlier build)', home: '/demos/agent-suitaibility-demo/', prefixes: ['/demos/agent-suitaibility-demo', '/demos/agent-suitability-demo'], hidden: true }
 ];
 export const DEMO_IDS = DEMOS.map(d => d.id);
 
