@@ -1,0 +1,8 @@
+{
+  "name": "symbo-demos",
+  "private": true,
+  "description": "Symbo demo hub on symbo.si with gated, time-limited access.",
+  "dependencies": {
+    "@netlify/blobs": "^11.1.0"
+  }
+}

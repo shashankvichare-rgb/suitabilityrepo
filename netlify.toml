@@ -1,3 +1,9 @@
+# Symbo demos · symbo.si
+# Every path is gated by netlify/edge-functions/access-gate.js (configured inline: path "/*").
+# Required environment variables (Netlify → Project configuration → Environment variables, scope: Functions):
+#   ACCESS_TEAM_CODE        team passcode for full access + admin console (falls back to DEMO_INDEX_PASSWORD)
+#   ACCESS_SIGNING_SECRET   long random string used to sign sessions and hash invite codes
+
 [build]
   publish = "symbo-demos-netlify/symbo-suitability-github"
   edge_functions = "symbo-demos-netlify/netlify/edge-functions"
@@ -6,15 +12,34 @@
   directory = "symbo-demos-netlify/netlify/functions"
   node_bundler = "esbuild"
 
+# Access API must come before the pet API's /api/* rule (first match wins).
+[[redirects]]
+  from = "/api/access/*"
+  to = "/.netlify/functions/access-api/:splat"
+  status = 200
+  force = true
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/pet-api/:splat"
   status = 200
 
-[[edge_functions]]
-  function = "demo-index-gate"
-  path = "/"
+# Motor demo is hosted on its own Netlify site; serve it here so it sits behind the same gate.
+[[redirects]]
+  from = "/demos/motor"
+  to = "/demos/motor/"
+  status = 301
 
-[[edge_functions]]
-  function = "demo-index-gate"
-  path = "/index.html"
+[[redirects]]
+  from = "/demos/motor/*"
+  to = "https://symboagentmotordemo.netlify.app/:splat"
+  status = 200
+  force = true
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "no-referrer"
+    X-Content-Type-Options = "nosniff"

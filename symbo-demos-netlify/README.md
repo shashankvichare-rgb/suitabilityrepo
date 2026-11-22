@@ -1,28 +1,92 @@
-# Symbo demos for the existing Netlify project
+# Symbo demos on symbo.si
 
-This package updates the **existing** `symbosuitability` Netlify project. It keeps the current suitability engine and adds a generic Symbo agent journey.
+Every page on symbo.si is behind one access gate. Nobody sees a demo without signing in.
 
-## URLs after deployment
+| Who | How they sign in | What they get |
+|---|---|---|
+| Symbo team | Name + team code at `symbo.si/access/` | All demos and the access console, 12 hours |
+| Client / partner | Invite link + their email + an 8-character code | Only the demos on their invite, for the time you set (15 min default), on one device |
 
-- Demo index: `https://symbo.si/` (password required)
-- Suitability engine: `https://symbo.si/demos/suitabilityengine/`
-- Agent journey: `https://symbo.si/demos/agent-suitaibility-demo/`
+## Demos
 
-The agent path deliberately uses the spelling in the request: `suitaibility`. The correctly spelled `/demos/agent-suitability-demo/` can be added as an alias later.
+| Demo | Path | Invite id |
+|---|---|---|
+| Suitability Agent Journey · Credit Life | `/demos/suitability-agent-journey/` | `creditlife` |
+| Embedded widget · LoanBee checkout | `/demos/loanbee-checkout/` | `widget` |
+| Suitability engine | `/demos/suitabilityengine/` | `engine` |
+| Motor agent journey | `/demos/motor/` (proxied) | `motor` |
+| Pet insurance | `/demos/pet-insurance/` | `pet` |
+| Agent journey · consumer durables (earlier build) | `/demos/agent-suitaibility-demo/` | `agent` |
 
-## Deploy through the current GitHub repository
+### Suitability Agent Journey (Credit Life)
 
-1. In the existing GitHub repository connected to Netlify, copy the **contents** of this package into the repository root. Replace the existing `netlify.toml` and `symbo-suitability-github/index.html`; add `netlify/edge-functions/demo-index-gate.js` and the `demos/agent-suitaibility-demo/` folder. Do not upload this ZIP as a single file or add an extra wrapper folder.
-2. Before pushing, open Netlify **symbosuitability → Project configuration → Environment variables**. Add `DEMO_INDEX_PASSWORD` with a strong password. Give it **Functions** scope. Keep the value in Netlify; do not put it in GitHub or `netlify.toml`.
-3. Commit and push to the branch Netlify deploys. If the password variable was added after deployment, trigger a fresh deploy; Edge Function environment changes take effect on a new deploy.
-4. Check the three URLs above. The root should prompt for a username and password. Use username **`symbo`** and the password set in Netlify. `/index.html` is protected as well. The two demo URLs should open directly without the root password.
+The hub's Agent card opens this. A LoanBee (fictional lender) agent adds Credit Life to a business loan:
+borrower → loan → needs + health declaration → offer (reducing, level or joint; added to loan or upfront) →
+customer consents on their own phone with a one-time code → pre-filled membership & health form (MEF) and certificate.
+The right-hand Symbo decision view shows the need score, eligibility, price build-up, guardrails and a live record.
 
-If the root shows `503`, the password variable was not available to the Edge Function at deploy time. Check its name and Functions scope, then redeploy. If it opens without a password, check that `netlify/edge-functions/demo-index-gate.js` is at the repository root and that Netlify used the new root `netlify.toml`.
+- Rules and rates: `demos/suitability-agent-journey/engine.js` (`RULES`). Illustrative, not an insurer's filed card. Replace `rateCard` with the insurer's age/term rates when agreed.
+- Personas: `PERSONAS` at the top of `app.js`.
+- Tests: `node --test tests/*.test.mjs` from the repo root.
+- Loader and pulse icon come from the Partner Success Portal.
 
-## What the agent demo does
+## Share a demo with a client
 
-The five steps remain: customer and asset, needs, shortlist, proposal, and track/complete. The customer preview includes individual accept/decline choices, disclosures, payment preference, an on-screen demo code, and downloadable evidence.
+1. Sign in as team, then open **symbo.si/access/admin/** (or click **Share access** in the bottom-left pill).
+2. Fill in the recipient's name, company and email, tick the demos, pick the viewing time.
+3. Click **Create invite**. Copy the **link message** into an email and the **code message** into WhatsApp/SMS. Send them on different channels. The code is shown once.
+4. Watch the invite card. It shows *Not opened → Viewing (time left) → Finished*, page views, devices, and blocked attempts.
 
-This is a browser-local simulation. It sends **no email or OTP**, collects **no payment**, and issues **no policy**. Demo applications and edited masters stay in that browser's local storage; a customer preview link works only in the same browser. Use fictional details. The supplied TVS consent record and email credentials are not included.
+During a meeting you can click **+15 min** to extend, or **Revoke** to close their access. An open tab closes within 45 seconds of a revoke.
 
-The root password protects only the demo directory page. Anyone with a direct demo URL can open that demo. Add future landing pages as folders inside `symbo-suitability-github/`, for example `landing/product-name/index.html`, and link them from the index when ready.
+## What stops forwarding
+
+- **One device per invite.** The first browser that redeems the code owns it. If the client forwards the link, code and email, the second device is refused and the invite is flagged **Possible forwarding** in the console.
+- **Email + code + link.** The link alone, or the code alone, is useless. Five wrong emails lock the invite.
+- **Short window.** The clock starts at first sign-in. Unused codes expire (default 48 h).
+- **Session bound to the browser.** A copied session cookie fails on another browser.
+- **Watermark.** Guest pages carry the recipient's name, company, email and time, tiled faintly across the screen and stronger when printed. A leaked screenshot shows who leaked it.
+- **No indexing, no iframing, no caching.** `noindex`, `X-Frame-Options: DENY`, `Cache-Control: no-store` on every response.
+- **Audit log.** Every sign-in, page view, failed attempt and blocked reuse is in the **Activity** tab.
+
+Limit: nothing stops someone screen-recording during their window. The watermark makes that traceable.
+
+## One-time setup in Netlify
+
+Netlify → **symbosuitability** → Project configuration → Environment variables. Scope: **Functions** (this covers Edge Functions too).
+
+| Variable | Value |
+|---|---|
+| `ACCESS_TEAM_CODE` | The team passcode. If unset, the existing `DEMO_INDEX_PASSWORD` is used. |
+| `ACCESS_SIGNING_SECRET` | A long random string. Generate with `openssl rand -base64 48`. Never put it in GitHub. |
+
+Then redeploy. Netlify Blobs (where invites and the log are stored) needs no setup.
+
+**Team code leaked?** Change `ACCESS_TEAM_CODE`, redeploy, then click **Sign out all team sessions** in the console.
+
+## Add a new demo
+
+1. Put it in `symbo-suitability-github/demos/<folder>/`.
+2. Add a row to `DEMOS` in `netlify/lib/access-core.mjs` with an `id`, `name`, `home` and `prefixes`. It then appears as a checkbox in the console.
+3. Link it from the hub.
+
+Paths not listed in `DEMOS` are open to the team only. Guests are refused.
+
+## Motor demo
+
+`/demos/motor/` proxies `https://symboagentmotordemo.netlify.app/`, so it sits behind the gate. That original `netlify.app` address is still public. Password-protect or unpublish that Netlify site, or move the motor build into `demos/motor/` here.
+
+## Files
+
+```
+netlify.toml                                    (repo root) gate, API route, motor proxy
+package.json                                    (repo root) @netlify/blobs
+symbo-demos-netlify/
+  netlify/edge-functions/access-gate.js         runs on every request
+  netlify/functions/access-api.mjs              sign-in, invites, revoke, log
+  netlify/lib/access-core.mjs                   shared: demo list, signing, codes
+  symbo-suitability-github/access/              sign-in page, session layer, styles
+  symbo-suitability-github/access/admin/        access console
+```
+
+The old `demo-index-gate.js` (homepage-only Basic Auth) is removed.

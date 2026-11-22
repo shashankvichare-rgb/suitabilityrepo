@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#011a14">
+  <title>Access console · Symbo demos</title>
+  <link rel="icon" href="/access/symbo-mark.png">
+  <link rel="stylesheet" href="/access/access.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="left">
+      <span class="logo-chip"><img src="/access/symbo-logo.png" alt="Symbo"></span>
+      <span class="divider"></span>
+      <span class="product">Access console</span>
+    </div>
+    <div class="right">
+      <span id="me"></span>
+      <a class="btn ghost-dark small" href="/">Demo hub</a>
+    </div>
+  </div>
+</header>
+
+<section class="admin-hero dark">
+  <div class="glow"></div>
+  <div class="wrap">
+    <p class="eyebrow">Share demos</p>
+    <h1>Give one person, one window.</h1>
+    <p>Each invite opens chosen demos for one recipient, on one device, for a set time. Send the link and the code through different channels.</p>
+    <div class="stats">
+      <div><b id="st-active">–</b><span>Viewing now</span></div>
+      <div><b id="st-unused">–</b><span>Waiting to be opened</span></div>
+      <div><b id="st-week">–</b><span>Invites in the last 7 days</span></div>
+      <div class="alert-stat"><b id="st-blocked">–</b><span>Blocked reuse attempts</span></div>
+    </div>
+  </div>
+</section>
+
+<main class="page">
+  <div class="wrap admin-grid">
+    <aside class="sticky">
+      <div class="card">
+        <div class="card-head"><h2>New invite</h2><span class="tag blue">Guest</span></div>
+        <form id="create" class="stack" novalidate>
+          <label class="field"><span>Recipient name</span><input name="name" required maxlength="80" placeholder="Priya Sharma"></label>
+          <div class="row2">
+            <label class="field"><span>Company</span><input name="company" maxlength="80" placeholder="Acme Finance"></label>
+            <label class="field"><span>Email</span><input name="email" type="email" required maxlength="160" placeholder="priya@acme.com"></label>
+          </div>
+          <div>
+            <span class="legend">Demos to share</span>
+            <div class="demo-picks" id="demo-picks"></div>
+          </div>
+          <div>
+            <span class="legend">Viewing time after sign-in</span>
+            <div class="options" id="duration">
+              <label><input type="radio" name="durationMin" value="15" checked><span>15 min</span></label>
+              <label><input type="radio" name="durationMin" value="30"><span>30 min</span></label>
+              <label><input type="radio" name="durationMin" value="60"><span>1 hour</span></label>
+              <label><input type="radio" name="durationMin" value="120"><span>2 hours</span></label>
+            </div>
+          </div>
+          <details class="more">
+            <summary>More options</summary>
+            <div class="stack" style="display:flex;flex-direction:column;gap:14px">
+              <div class="row2">
+                <label class="field"><span>Code must be used within</span>
+                  <select name="validHours"><option value="4">4 hours</option><option value="24">24 hours</option><option value="48" selected>48 hours</option><option value="168">7 days</option></select>
+                </label>
+                <label class="field"><span>Devices allowed</span>
+                  <select name="maxDevices"><option value="1" selected>1 device</option><option value="2">2 devices</option><option value="3">3 devices</option><option value="5">5 devices</option></select>
+                </label>
+              </div>
+              <label class="field"><span>Internal note</span><input name="note" maxlength="240" placeholder="e.g. Follow-up after Tuesday's call"><small>Only the team sees this.</small></label>
+            </div>
+          </details>
+          <div class="alert error" id="create-error" role="alert"></div>
+          <button class="btn full" type="submit">Create invite <span aria-hidden="true">→</span></button>
+        </form>
+
+        <div class="share" id="share" style="margin-top:20px">
+          <div class="share-box">
+            <div class="share-label"><span>1 · Link (email)</span><span id="share-for"></span></div>
+            <div class="share-line"><code id="share-link"></code><button class="btn secondary small" data-copy="link-msg">Copy message</button></div>
+            <div class="share-label"><span>2 · Code (WhatsApp / SMS)</span></div>
+            <div class="share-line"><code class="big" id="share-code"></code><button class="btn secondary small" data-copy="code-msg">Copy message</button></div>
+            <p class="fineprint">The code is shown once. It isn't stored in readable form, so copy it now. Send it on a different channel from the link.</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <section>
+      <div class="card">
+        <div class="tabs" role="tablist">
+          <button role="tab" aria-selected="true" data-tab="invites">Invites <span class="count" id="count-invites"></span></button>
+          <button role="tab" aria-selected="false" data-tab="activity">Activity</button>
+          <span style="flex:1"></span>
+          <button type="button" id="refresh" style="font-size:13px;color:var(--symbo-green-dark)">Refresh ↻</button>
+        </div>
+
+        <div id="panel-invites">
+          <div class="filters" id="filters"></div>
+          <div id="invite-list"></div>
+        </div>
+
+        <div id="panel-activity" hidden>
+          <div class="filters" id="activity-scope"></div>
+          <div style="overflow-x:auto"><table class="events"><thead><tr><th>When</th><th>Event</th><th>Who</th><th>Detail</th></tr></thead><tbody id="events"></tbody></table></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:24px">
+        <div class="card-head" style="margin-bottom:8px"><h2>Team access</h2></div>
+        <p class="muted small" style="margin:0 0 16px;line-height:1.6">Team sessions last 12 hours. If the team code leaks, change <code>ACCESS_TEAM_CODE</code> in Netlify and redeploy, then sign everyone out here.</p>
+        <button class="btn danger small" id="signout-all">Sign out all team sessions</button>
+      </div>
+    </section>
+  </div>
+</main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="/access/admin/admin.js" defer></script>
+</body>
+</html>
