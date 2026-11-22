@@ -138,28 +138,46 @@ const NEED_LABEL = { repay: 'Loan repayment if the earner dies', emi: 'EMIs when
   vehicle: 'Vehicle damage and liability', tripCancel: 'Trip cancellation', tripDelay: 'Delays and missed connections', tripMedical: 'Medical emergency abroad', visa: 'Visa refusal', fee: 'Fees if the earner cannot pay', feeVisa: 'Deposit lost on visa refusal',
   studentHealth: 'Student health abroad', home: 'Home structure and contents', parents: 'Parents\' health', chronic: 'Chronic condition care', maternity: 'Maternity costs' };
 
-/* ── compliance markers ── */
+/* ── compliance markers ──
+   Structure and clause references follow "Building Compliant Embedded Insurance in Lending Flows" (Symbo practitioner's guide):
+   six buckets, the 7-step compliant journey and the five records kept per policy. Clause numbers are the guide's (NBFC
+   Responsible Business Conduct Amendment Directions, 2026). Updated for the RBI's 15 June 2026 statement: effective 1 January 2027,
+   suitability judged at the time of sale, post-sale confirmation replaced by an acknowledgement with a helpline number. */
+export const REG = { name: 'RBI Responsible Business Conduct Directions, 2026', short: 'RBI RBC 2026', effective: '1 January 2027' };
 const MARKERS = {
-  optin: ['Opt-in only', 'Never pre-selected. The customer adds it.', 'RBI sales-practice directions'],
-  untied: ['Not tied to approval', 'Loan or booking goes ahead with or without it.', 'RBI Fair Practices Code'],
-  kfs: ['Shown in KFS and APR', 'Premium collected with the loan is disclosed in the Key Facts Statement and counted in APR.', 'RBI KFS circular 2024 · Digital Lending Directions 2025'],
-  price: ['Price shown separately', 'Premium, GST and any service fee are itemised before consent.', 'RBI sales-practice directions'],
-  consent: ['Explicit consent', 'A specific, informed tap for this product. Stored with time and device.', 'RBI sales-practice directions · DPDP Act'],
-  suit: ['Suitability recorded', 'The answers and reasons behind the recommendation are saved.', 'RBI sales-practice directions'],
-  freelook: ['30-day free look', 'Cancel within 30 days for a refund.', 'IRDAI policyholder regulations 2024'],
-  cis: ['Customer information sheet', 'Plain summary of cover, exclusions and claims is shown before purchase.', 'IRDAI policyholder regulations 2024'],
-  assisted: ['Assisted disclosure', 'Vulnerable customer: terms are read out and confirmed in their language.', 'RBI sales-practice directions'],
-  vas: ['Labelled as a service', 'Value-added services are shown as services, not insurance.', 'RBI sales-practice directions'],
+  optin: ['Never pre-selected', 'Added only by the customer. No basket sneaking.', 'Dark patterns · §101X, Annex III'],
+  untied: ['Not tied to the loan', 'Approval and disbursal do not depend on it.', 'Anti-bundling · §101V'],
+  price: ['Full price upfront', 'Premium, GST and fees shown at the first touchpoint. No drip pricing.', 'Promotional controls · §101K'],
+  consent: ['One consent per product', 'A separate, affirmative action for this product only. Never clubbed.', 'Consent · §101G'],
+  tcgate: ['Terms before consent', 'The consent button activates only after the terms are viewed.', 'Consent · §101H'],
+  suit: ['Suitability at time of sale', 'Age, income, financial literacy and risk tolerance matched to the product. Rationale stored.', 'Suitability · §101I'],
+  role: ['Role disclosed', 'Insurance by the insurer, offered by the lender through Symbo. Never shown as the lender\'s own.', 'Promotional controls · §101J'],
+  choice: ['Provider choice', 'Buy here, bring your own policy, or skip.', 'Anti-bundling · §101V'],
+  deduct: ['No silent deduction', 'Premium is never taken from loan money without a separate consent.', 'Anti-bundling · §101W'],
+  equal: ['Skip equals Add', 'Decline has the same size and weight as accept, in neutral words.', 'Dark patterns · Annex III'],
+  ack: ['Acknowledgement sent', 'SMS or WhatsApp acknowledgement with a helpline number, and a copy of the terms.', 'Confirmation · §101S, §101T'],
+  feedback: ['30-day feedback check', 'Customer is asked within 30 days whether they understood the product.', 'Post-sale feedback · RBI RBC 2026'],
+  freelook: ['30-day free look', 'Cancel within 30 days for a refund.', 'IRDAI policyholder regulations'],
+  assisted: ['Assisted disclosure', 'Vulnerable customer: terms are explained and confirmed in their language.', 'Suitability · §101I'],
   merchant: ['Strictly opt-in for merchants', 'Never linked to the loan decision.', 'Symbo product master']
 };
+export const marker = k => ({ key: k, title: MARKERS[k][0], text: MARKERS[k][1], ref: MARKERS[k][2] });
 export function markersFor(prod, p, d) {
-  const loan = ['loan', 'business', 'gig', 'fee'].includes(p.ctx);
-  const m = ['optin', 'untied', loan ? 'kfs' : 'price', 'consent', 'suit', 'freelook', 'cis'];
+  const m = ['optin', 'untied', 'price', 'consent', 'tcgate', 'suit', 'role', 'choice', 'ack', 'freelook'];
   if (d.vulnerable) m.push('assisted');
   if (prod.id === 'FIN-02' && p.ctx === 'business') m.push('merchant');
-  return m.map(k => ({ key: k, title: MARKERS[k][0], text: MARKERS[k][1], ref: MARKERS[k][2] }));
+  return m.map(marker);
 }
-export const marker = k => ({ key: k, title: MARKERS[k][0], text: MARKERS[k][1], ref: MARKERS[k][2] });
+/* The guide's 7-step compliant journey and the five records generated per policy. */
+export const JOURNEY = [
+  ['Loan approved', 'Decision is independent of insurance', '§101V'], ['Suitability check', 'Profile matched to product fit', '§101I'], ['Product presentation', 'Role clarity, full price, terms visible', '§101J, §101K'],
+  ['Individual consent', 'Per product, terms first, unchecked default', '§101G, §101H'], ['Provider choice', 'Buy here, bring your own, or skip', '§101V'], ['Separate payment', 'Explicit consent if taken from loan money', '§101W'],
+  ['Acknowledgement', 'SMS or email with helpline, terms copy delivered', '§101S, §101T']
+];
+export const EVIDENCE = [
+  ['Consent record', 'Timestamp, product, customer, consent method, terms version'], ['Suitability assessment log', 'Profile inputs, match score, recommendation rationale'],
+  ['Product disclosure record', 'Third-party role statement, fee breakdown, terms delivery'], ['Post-sale acknowledgement', 'Delivery time and channel, helpline shared'], ['Policy document delivery', 'Terms copy, policy schedule, insurer details']
+];
 
 /* ── audit log (hash-chained so an entry cannot be changed without breaking the chain) ── */
 function fnv(str) { let h = 0x811c9dc5; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; } return h.toString(16).padStart(8, '0'); }
@@ -235,14 +253,13 @@ export function run(p, log = makeLog(p.key)) {
   const vasFee = vas.length ? 150 : 0;
 
   /* guardrails */
-  const loan = ['loan', 'business', 'gig', 'fee'].includes(p.ctx);
   const ratio = d.ticket ? +(spend / d.ticket * 100).toFixed(2) : 0;
   const guards = [
-    { ...marker('optin'), ok: true }, { ...marker('untied'), ok: true }, { ...marker(loan ? 'kfs' : 'price'), ok: true },
-    { ...marker('consent'), ok: p.dataConsent, note: p.dataConsent ? '' : 'Data consent missing: engine will not profile' },
-    { ...marker('suit'), ok: true }, { key: 'cap', title: `Premium ${ratio}% of ticket`, text: `Within the ${d.capPct}% cap set for this ticket size.`, ref: 'Partner policy', ok: ratio <= d.capPct },
-    { key: 'overlap', title: 'No duplicate cover', text: `${all.filter(x => x.state === 'overlap').length} product(s) removed because the customer already has that cover.`, ref: 'RBI sales-practice directions', ok: true },
-    { ...marker('freelook'), ok: true }, ...(d.vulnerable ? [{ ...marker('assisted'), ok: true, flag: true }] : [])
+    { ...marker('suit'), ok: true }, { ...marker('optin'), ok: true }, { ...marker('untied'), ok: true }, { ...marker('price'), ok: true },
+    { ...marker('consent'), ok: p.dataConsent }, { ...marker('tcgate'), ok: true }, { ...marker('role'), ok: true }, { ...marker('choice'), ok: true }, { ...marker('deduct'), ok: true },
+    { key: 'overlap', title: 'No duplicate cover', text: `${all.filter(x => x.state === 'overlap').length} product(s) removed because the customer already has that cover.`, ref: 'Suitability · §101I', ok: true },
+    { key: 'cap', title: `Premium ${ratio}% of ticket`, text: `Within the ${d.capPct}% cap set for this ticket size.`, ref: 'Partner policy', ok: ratio <= d.capPct },
+    { ...marker('ack'), ok: true }, { ...marker('feedback'), ok: true }, ...(d.vulnerable ? [{ ...marker('assisted'), ok: true, flag: true }] : [])
   ];
   log.add('Guardrails', `${guards.filter(g => g.ok).length}/${guards.length} checks passed`, d.vulnerable ? 'Vulnerable-customer flag: assisted disclosure required' : 'No vulnerability flag');
   log.add('Response', `${picked.length} cover${picked.length === 1 ? '' : 's'} + ${vas.length} service${vas.length === 1 ? '' : 's'} recommended`, picked.map(x => x.name).join(' · ') || 'Nothing suitable: no offer shown');

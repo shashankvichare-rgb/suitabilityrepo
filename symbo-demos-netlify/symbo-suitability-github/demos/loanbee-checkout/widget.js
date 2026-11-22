@@ -22,7 +22,7 @@ const PLACEMENTS = [
 ];
 
 const S = { p: { ...PEOPLE[0] }, res: null, pl: 0, w: null, panel: null, drawer: null, pops: new Map() };
-const freshW = () => ({ added: null, sheet: null, open: false, skipped: false, more: false, dismissed: false });
+const freshW = () => ({ added: null, sheet: null, open: false, skipped: false, more: false, dismissed: false, read: false });
 function pop(html) { const id = 'p' + S.pops.size; S.pops.set(id, html); return `data-pop="${id}"`; }
 const pick = () => S.res.picked[0] || null;
 const gst = n => Math.round(n * .18);
@@ -45,8 +45,8 @@ function vBorrower() {
   const c = S.res.counts;
   return `<div class="pn-h"><p class="eyebrow">Borrower</p><button class="x" data-act="close-drawer" aria-label="Close"><i class="ph-bold ph-x"></i></button></div>
     <div class="people">${PEOPLE.map(x => `<button class="${x.key === S.p.key ? 'on' : ''}" data-person="${x.key}"><span class="av">${esc(x.name.split(' ').map(n => n[0]).join(''))}</span><b>${esc(first(x.name))}</b><small>${esc(x.tag)}</small></button>`).join('')}</div>
-    <p class="eyebrow">Loan</p>${seg('amount', 'Amount', AMOUNTS, short)}${seg('tenure', 'Tenure', TENURES, t => t + ' m')}
-    <p class="eyebrow">What LoanBee knows</p>${seg('occupation', 'Work', ['Salaried', 'Self-employed', 'Gig worker'])}${seg('dependants', 'Dependants', [0, 1, 2, 3])}${seg('savings', 'Savings', OPTIONS.savings, s => s.replace(' months', ' mo'))}${seg('commute', 'Travel', OPTIONS.commute, s => ({ 'Office / home': 'Low', 'Two-wheeler daily': '2-wheeler', 'On the road all day': 'On road' })[s])}
+    <p class="eyebrow">Loan</p>${seg('amount', 'Amount', AMOUNTS, n => n >= 1e5 ? `₹${n / 1e5}L` : `₹${n / 1e3}k`)}${seg('tenure', 'Tenure', TENURES, t => t + ' m')}
+    <p class="eyebrow">What LoanBee knows</p>${seg('occupation', 'Work', ['Salaried', 'Self-employed', 'Gig worker'], s => ({ 'Self-employed': 'Self-emp.', 'Gig worker': 'Gig' })[s] || s)}${seg('dependants', 'Dependants', [0, 1, 2, 3])}${seg('savings', 'Savings', OPTIONS.savings, s => ({ 'Under 2 months': '< 2 mo', '2–5 months': '2–5 mo', '6+ months': '6+ mo' })[s])}${seg('commute', 'Travel', OPTIONS.commute, s => ({ 'Office / home': 'Low', 'Two-wheeler daily': '2-wheeler', 'On the road all day': 'On road' })[s])}
     <p class="eyebrow">Cover already held</p>${seg('life', 'Life', OPTIONS.life)}${seg('healthCover', 'Health', OPTIONS.healthCover, s => s.replace(' only', '').replace(' policy', ''))}${seg('pa', 'Accident', OPTIONS.pa)}
     <div class="mini"><p class="eyebrow">Engine</p><div class="mp">${[['Signals', S.res.datapoints.length], ['Products', c.catalogue], ['Eligible', c.eligible], ['Fit', c.fit], ['Shown', c.recommended]].map(([l, n], i) => `<span><b>${n}</b><small>${l}</small></span>${i < 4 ? '<i></i>' : ''}`).join('')}</div><a href="/demos/suitabilityengine/">See the engine work <i class="ph-bold ph-arrow-up-right"></i></a></div>`;
 }
@@ -105,14 +105,28 @@ function wPost() {
   const x = pick(); if (!x || S.w.dismissed) return '';
   return S.w.added ? addedStrip() : `<section class="w w-post"><button class="dis" data-act="dismiss" aria-label="Dismiss"><i class="ph-bold ph-x"></i></button><p class="eyebrow">Now that your loan is done</p>${offerRow(x)}<div class="w-foot">${digit}<span>Paid separately · not from your loan</span></div></section>`;
 }
+/* What the policy leaves out, by cover type. Short and plain; the policy wording governs. */
+const NOT_COVERED = {
+  Accident: 'Illness, self-injury, intoxication and hazardous sports.', 'Loan protection': 'Death in the first year by suicide, and conditions known but not declared.', 'Hospital cash': 'The first 30 days for illness, and stays under 24 hours.',
+  Health: 'Conditions you already have, for the waiting period in the policy.', 'Cyber & card': 'Payments you approved yourself, including after sharing an OTP.', Device: 'Wear and tear, cosmetic damage and loss.'
+};
+/* The consent step, built to the compliant-journey guide: role disclosed, full price first, terms before consent,
+   one product at a time, decline equal to accept, provider choice, no deduction from the loan. */
 function detailsSheet() {
   const x = S.res.picked.find(k => k.id === S.w.sheet); if (!x) return '';
-  const p = priceOf(x), g = gst(p), post = PLACEMENTS[S.pl].key === 'post';
-  return `<div class="scrim" data-act="close-sheet"></div><section class="sheet"><span class="grab"></span><div class="sh-h"><span class="o-ico"><i class="ph-bold ph-shield-check"></i></span><div><b>${esc(x.name.replace(/ \(.*\)/, ''))}</b><small>${esc(x.cat)}</small></div><button class="x" data-act="close-sheet" aria-label="Close"><i class="ph-bold ph-x"></i></button></div>
-    <p class="cov">${esc(x.covers)}</p><div class="chips">${(x.matched[0]?.signals || []).map(s => `<span><i class="ph-bold ph-check"></i>${esc(s)}</span>`).join('')}</div>
-    <div class="bill"><div><span>Premium</span><b>${inr(p)}</b></div><div><span>GST 18%</span><b>${inr(g)}</b></div><div class="tot"><span>You pay · ${esc(x.unit || 'one time')}</span><b>${inr(p + g)}</b></div></div>
-    <ul class="facts"><li><i class="ph-bold ph-check"></i>Optional. Your loan does not depend on it.</li><li><i class="ph-bold ph-check"></i>${post ? 'Paid by UPI, not from your loan money.' : 'Listed separately in your Key Facts Statement.'}</li><li><i class="ph-bold ph-check"></i>Cancel within 30 days for a full refund.</li></ul>
-    <button class="w-btn full" data-act="agree" data-id="${x.id}">I agree. Add cover for ${inr(p + g)}</button><button class="lk c" data-act="close-sheet">Not now</button><div class="w-foot">${digit}<a data-act="none">Policy wording</a></div></section>`;
+  const p = priceOf(x), g = gst(p), tot = p + g, perDay = (tot / 365).toFixed(tot / 365 < 10 ? 1 : 0), post = PLACEMENTS[S.pl].key === 'post';
+  return `<div class="scrim" data-act="close-sheet"></div><section class="sheet consent"><span class="grab"></span>
+    <div class="sh-h"><span class="o-ico"><i class="ph-bold ph-shield-check"></i></span><div><b>${esc(x.name.replace(/ \(.*\)/, ''))}</b><small>${esc(x.matched[0]?.need || x.cat)}</small></div><button class="x" data-act="close-sheet" aria-label="Close"><i class="ph-bold ph-x"></i></button></div>
+    <p class="role">Insurance by <img src="/hub/brand/digit.png" alt="Digit">offered by LoanBee through Symbo</p>
+    <div class="value"><div><small>You pay · ${esc(x.unit || 'one time')}</small><b>${inr(tot)}</b></div><div><small>That is about</small><b>₹${perDay} a day</b></div></div>
+    <p class="split">Premium ${inr(p)} + GST ${inr(g)} · no other fees</p>
+    <div class="terms" tabindex="0" aria-label="Terms and exclusions"><p class="t-h">Terms and exclusions</p>
+      <p><b>Covers.</b> ${esc(x.covers)}</p><p><b>Does not cover.</b> ${esc(NOT_COVERED[x.group] || 'Events before the cover starts, and the exclusions listed in the policy.')}</p>
+      <p><b>Optional.</b> Your loan is approved either way. Saying no changes nothing.</p><p><b>Payment.</b> ${post ? 'Paid by UPI now.' : 'Paid by UPI at checkout.'} It is never deducted from your loan money.</p>
+      <p><b>Change your mind.</b> Cancel within 30 days for a full refund. Remove it here any time before you sign.</p><p><b>Claims.</b> Raise a claim in the LoanBee app or on the helpline in your confirmation SMS.</p></div>
+    <div class="sh-foot"><p class="gate${S.w.read ? ' ok' : ''}" id="gate"><i class="ph-bold ${S.w.read ? 'ph-check-circle' : 'ph-arrow-down'}"></i><span>${S.w.read ? 'Terms viewed. Choose below.' : 'Scroll through the terms to enable Add cover'}</span></p>
+    <div class="eq"><button class="w-btn ghost" data-act="close-sheet-no">Not now</button><button class="w-btn" data-act="agree" data-id="${x.id}" ${S.w.read ? '' : 'disabled'}>Add cover · ${inr(tot)}</button></div>
+    <button class="lk c" data-act="own">I already have this cover elsewhere</button></div></section>`;
 }
 function vPhone() {
   const p = S.p, d = S.res.derived, pl = PLACEMENTS[S.pl].key, fee = Math.round(p.amount * .0236), x = S.res.picked.find(k => k.id === S.w.added);
@@ -165,9 +179,11 @@ document.addEventListener('click', e => {
     case 'next': return go(S.pl + 1);
     case 'toggle-open': S.w.open = !S.w.open; if (S.w.open) event('Opened the protection card'); return render();
     case 'more': S.w.more = true; event('Viewed more options'); return render();
-    case 'details': e.stopPropagation(); S.w.sheet = x.id; event(`Opened details · ${x.name}`, `Price ${inr(totalOf(x))} incl. GST shown`); return render();
+    case 'details': e.stopPropagation(); S.w.sheet = x.id; S.w.read = false; event(`Opened details · ${x.name}`, `Role, full price ${inr(totalOf(x))} incl. GST and terms shown`); render(); return checkTerms();
     case 'close-sheet': S.w.sheet = null; return render();
-    case 'agree': S.w.added = x.id; S.w.sheet = null; S.w.skipped = false; event(`Consent given · ${x.name}`, `Explicit tap on "I agree" · ${inr(totalOf(x))} · terms shown first`); event('Cover added to checkout', 'Free-look 30 days · customer information sheet sent'); return render();
+    case 'agree': if (!S.w.read) return; S.w.added = x.id; S.w.sheet = null; S.w.skipped = false; event(`Consent given · ${x.name}`, `Tapped "Add cover" after viewing the terms · this product only · ${inr(totalOf(x))}`); event('Cover added · paid separately by UPI', 'Not deducted from loan money'); event('Acknowledgement sent by SMS', 'With helpline number and a copy of the terms'); return render();
+    case 'close-sheet-no': S.w.sheet = null; event('Chose "Not now"', 'Loan journey continues unchanged · offer not repeated'); if (['sheet', 'checklist'].includes(PLACEMENTS[S.pl].key)) S.w.skipped = true; return render();
+    case 'own': S.w.sheet = null; S.w.skipped = true; event('Has this cover elsewhere', 'Provider choice respected · no offer shown again'); return render();
     case 'remove': event('Cover removed by customer', 'One tap · no questions asked'); S.w.added = null; return render();
     case 'skip': S.w.skipped = true; event('Skipped protection', 'Loan journey continues unchanged'); return render();
     case 'unskip': S.w.skipped = false; return render();
@@ -184,6 +200,16 @@ document.addEventListener('keydown', e => { if (e.target.matches('input,select,t
 let sx = null;
 document.addEventListener('pointerdown', e => { sx = e.target.closest('#pager, .meta') || (e.pointerType === 'touch' && e.target.closest('.mid') && !e.target.closest('.sheet')) ? e.clientX : null; });
 document.addEventListener('pointerup', e => { if (sx == null) return; const dx = e.clientX - sx; sx = null; if (Math.abs(dx) > 60) go(S.pl + (dx < 0 ? 1 : -1)); });
+/* Terms gate: Add cover activates once the terms have been scrolled to the end (or fit without scrolling). */
+function markRead() {
+  if (S.w.read || !S.w.sheet) return;
+  S.w.read = true; event('Terms viewed to the end', 'Terms version 1.2');
+  const btn = $('.sheet [data-act="agree"]'), gate = $('#gate');
+  if (btn) btn.disabled = false;
+  if (gate) { gate.classList.add('ok'); gate.innerHTML = '<i class="ph-bold ph-check-circle"></i><span>Terms viewed. Choose below.</span>'; }
+}
+function checkTerms() { const t = $('.sheet .terms'); if (t && t.scrollHeight <= t.clientHeight + 6) markRead(); }
+document.addEventListener('scroll', e => { const t = e.target; if (t instanceof Element && t.matches('.sheet .terms') && t.scrollTop + t.clientHeight >= t.scrollHeight - 6) markRead(); }, true);
 const popEl = $('#pop');
 document.addEventListener('mouseover', e => {
   const t = e.target.closest('[data-pop]'); if (!t) { popEl.classList.remove('on'); return; }

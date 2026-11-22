@@ -1,5 +1,5 @@
 /* Suitability in action · desktop dashboard over the shared Symbo engine. */
-import { PERSONAS, OPTIONS, SEGMENTS, PRODUCTS, VAS, BUNDLES, run, apiView, markersFor, inr, short } from '/hub/engine/engine.js';
+import { PERSONAS, OPTIONS, SEGMENTS, PRODUCTS, VAS, BUNDLES, REG, JOURNEY, EVIDENCE, run, apiView, markersFor, inr, short } from '/hub/engine/engine.js';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -97,12 +97,16 @@ function vRight() {
     const bad = S.tampered;
     body = `<div class="chain ${bad ? 'broken' : 'ok'}"><i class="ph-fill ${bad ? 'ph-warning-octagon' : 'ph-link'}"></i><span>${bad ? `Chain broken at entry ${bad}. The change is detected.` : `${r.log.entries.length} entries · hash chain intact`}</span>
       <button data-act="${bad ? 'restore' : 'tamper'}">${bad ? 'Restore' : 'Try altering one'}</button></div>
-      <ol class="log">${r.log.entries.map(e => `<li class="${bad && e.n >= bad ? 'bad' : ''}" style="--i:${e.n}"><div class="lg-h"><b>${esc(e.step)}</b><time>${new Date(e.at).toLocaleTimeString('en-IN', { hour12: false })}</time></div><p>${esc(bad === e.n ? e.text.replace(/\d+/, m => String(Number(m) + 2)) : e.text)}</p>${e.data ? `<small>${esc(e.data)}</small>` : ''}<code>${e.prev} → ${bad && e.n >= bad ? '✕ mismatch' : e.hash}</code></li>`).join('')}</ol>`;
+      <ol class="log">${r.log.entries.map(e => `<li class="${bad && e.n >= bad ? 'bad' : ''}" style="--i:${e.n}"><div class="lg-h"><b>${esc(e.step)}</b><time>${new Date(e.at).toLocaleTimeString('en-IN', { hour12: false })}</time></div><p>${esc(bad === e.n ? e.text.replace(/\d+/, m => String(Number(m) + 2)) : e.text)}</p>${e.data ? `<small>${esc(e.data)}</small>` : ''}<code>${e.prev} → ${bad && e.n >= bad ? '✕ mismatch' : e.hash}</code></li>`).join('')}</ol>
+      <div class="evi"><p class="eyebrow">Kept for every policy · 5 records</p>${EVIDENCE.map(([t, d]) => `<span ${pop(`<b>${esc(t)}</b><p>${esc(d)}</p><em>Exportable for an RBI audit</em>`)}><i class="ph-bold ph-file-text"></i>${esc(t)}</span>`).join('')}</div>`;
   } else if (S.tab === 'api') {
     const v = apiView(r), j = o => esc(JSON.stringify(o, null, 1)).replace(/&quot;([^&]+?)&quot;:/g, '<i>"$1"</i>:');
     body = `<div class="api"><p class="ep"><b>POST</b> /v1/suitability/recommend</p><pre>${j(v.request)}</pre><p class="ep ok"><b>200</b> ${r.counts.catalogue} evaluated · ${r.picked.length} returned</p><pre>${j(v.response)}</pre></div>`;
   } else {
-    body = `<ul class="guards">${r.guards.map(g => `<li class="${g.ok ? 'ok' : 'no'}${g.flag ? ' flag' : ''}" ${pop(`<b>${esc(g.title)}</b><p>${esc(g.text)}</p><em>${esc(g.ref)}</em>`)}><i class="ph-fill ${g.ok ? 'ph-check-circle' : 'ph-x-circle'}"></i><span>${esc(g.title)}<small>${esc(g.ref)}</small></span></li>`).join('')}</ul>`;
+    body = `<div class="reg"><i class="ph-fill ph-scales"></i><span><b>${esc(REG.name)}</b><small>Effective ${esc(REG.effective)} · checked on every request</small></span></div>
+      <ul class="guards">${r.guards.map(g => `<li class="${g.ok ? 'ok' : 'no'}${g.flag ? ' flag' : ''}" ${pop(`<b>${esc(g.title)}</b><p>${esc(g.text)}</p><em>${esc(g.ref)}</em>`)}><i class="ph-fill ${g.ok ? 'ph-check-circle' : 'ph-x-circle'}"></i><span>${esc(g.title)}<small>${esc(g.ref)}</small></span></li>`).join('')}</ul>
+      <p class="eyebrow sub-h">The compliant journey · 7 steps</p>
+      <ol class="jsteps">${JOURNEY.map(([t, d, ref], i) => `<li ${pop(`<b>${esc(t)}</b><p>${esc(d)}</p><em>${esc(ref)}</em>`)}><span>${i + 1}</span><b>${esc(t)}</b><em>${esc(ref)}</em></li>`).join('')}</ol>`;
   }
   const tab = (k, label, n) => `<button class="${S.tab === k ? 'on' : ''}" data-tab="${k}">${label}${n != null ? `<em>${n}</em>` : ''}</button>`;
   return `<aside class="col right"><div class="tabs">${tab('audit', 'Audit log', r.log.entries.length)}${tab('guards', 'Guardrails', r.guards.filter(g => g.ok).length + '/' + r.guards.length)}${tab('api', 'API')}</div>${body}

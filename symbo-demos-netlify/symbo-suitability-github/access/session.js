@@ -13,6 +13,25 @@
   const stamp = new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
   const initials = String(S.n || 'S').trim().split(/\s+/).map(x => x[0]).join('').slice(0, 2).toUpperCase();
 
+  /* Install as an app: every gated page gets the manifest and home-screen icon, so "Install" / "Add to Home Screen"
+     works from wherever the visitor is. Chrome and Edge raise beforeinstallprompt; iOS needs the Share menu. */
+  (function appMeta() {
+    const head = document.head;
+    if (!head || head.querySelector('link[rel="manifest"]')) return;
+    const add = (tag, attrs) => { const el = document.createElement(tag); for (const k in attrs) el.setAttribute(k, attrs[k]); head.appendChild(el); };
+    add('link', { rel: 'manifest', href: '/access/app/manifest.webmanifest' });
+    add('link', { rel: 'apple-touch-icon', href: '/access/app/apple-touch-icon.png' });
+    add('meta', { name: 'mobile-web-app-capable', content: 'yes' });
+    add('meta', { name: 'apple-mobile-web-app-capable', content: 'yes' });
+    add('meta', { name: 'apple-mobile-web-app-title', content: 'Symbo' });
+    add('meta', { name: 'apple-mobile-web-app-status-bar-style', content: 'black' });
+  })();
+  const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  let installEvent = null, showInstall = () => {};
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvent = e; showInstall(); });
+  window.addEventListener('appinstalled', () => { installEvent = null; showInstall(); });
+
   function watermarkUrl() {
     const line1 = [S.n, S.c].filter(Boolean).join(' · ');
     const line2 = `${S.e} · ${stamp}`;
@@ -43,6 +62,7 @@
   .left { margin: 10px 4px 2px; } .left div { display: flex; justify-content: space-between; font-size: 11.5px; color: rgba(255,255,255,.7); margin-bottom: 5px; } .left span { font-family: 'JetBrains Mono', ui-monospace, monospace; color: #fff; }
   .bar { height: 5px; border-radius: 99px; background: rgba(255,255,255,.12); overflow: hidden; } .bar i { display: block; height: 100%; background: linear-gradient(90deg, #00d182 25%, #fdd340 84%); border-radius: 99px; transition: width 1s linear; }
   .sec { font: 500 9.5px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: .16em; text-transform: uppercase; color: rgba(255,255,255,.45); margin: 12px 6px 4px; }
+  [hidden] { display: none !important; }
   a, button.item { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; border-radius: 10px; cursor: pointer; color: rgba(255,255,255,.88); font: 500 13px/1.3 Inter, system-ui, sans-serif; }
   a:hover, button.item:hover, a:focus-visible, button.item:focus-visible { background: rgba(255,255,255,.08); color: #fff; }
   a.cur { background: rgba(0,201,143,.16); color: #fff; box-shadow: inset 3px 0 0 #00c98f; }
@@ -58,7 +78,8 @@
     grid: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',
     play: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l6-3.5z"/></svg>',
     share: '<svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.7 15.4 6.5M8.6 13.3l6.8 4.2"/></svg>',
-    out: '<svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>'
+    out: '<svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>',
+    app: '<svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="3"/><path d="M12 7v7M9 11.5l3 3 3-3M10 18.5h4"/></svg>'
   };
 
   function build() {
@@ -76,8 +97,17 @@
         ${showHub ? `<p class="sec">Go to</p><a href="/" class="${here === '/' ? 'cur' : ''}">${ICON.grid}<span>All demos</span></a>` : ''}
         ${demos ? `<p class="sec">Demos</p>${demos}` : ''}
         ${!guest ? `<p class="sec">Team</p><a href="/access/admin/">${ICON.share}<span>Share access</span></a>` : ''}
+        <button class="item inst" type="button" hidden>${ICON.app}<span>${ios ? 'Add to Home Screen' : 'Install as an app'}</span></button>
         <button class="item out" type="button">${ICON.out}<span>Sign out</span></button>
       </nav>`;
+    const inst = root.querySelector('.inst'), banner = root.querySelector('.banner');
+    showInstall = () => { inst.hidden = standalone || !(installEvent || ios); };
+    showInstall();
+    inst.onclick = async () => {
+      if (installEvent) { const ev = installEvent; installEvent = null; ev.prompt(); try { await ev.userChoice; } catch {} showInstall(); return; }
+      banner.textContent = 'Tap the Share button, then "Add to Home Screen".';
+      banner.classList.add('show'); setTimeout(() => banner.classList.remove('show'), 7000);
+    };
     const fab = root.querySelector('.fab');
     const toggle = open => { const on = open ?? !fab.classList.contains('open'); fab.classList.toggle('open', on); fab.setAttribute('aria-expanded', String(on)); };
     fab.onclick = e => { e.stopPropagation(); toggle(); };

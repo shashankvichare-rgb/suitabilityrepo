@@ -95,7 +95,7 @@ const vPaying = () => `<div class="paying"><div class="cmp-mark"><img src="./ass
 
 function vDone() {
   const first = firstName(B.q.name);
-  return `${steps()}<div class="done-hero"><div class="tick"><i class="ph-bold ph-check"></i></div><h1>You're covered, ${esc(first)}</h1><p>Payment of ${inr(total())} received. Your certificates are below and on their way to ${esc(B.q.email)}.</p></div>
+  return `${steps()}<div class="done-hero"><div class="tick"><i class="ph-bold ph-check"></i></div><h1>You're covered, ${esc(first)}</h1><p>Payment of ${inr(total())} received. Your certificates are below and on their way to ${esc(B.q.email)}. An acknowledgement with our helpline number is coming by SMS.</p></div>
     ${B.certs.map(c => `<div class="cert"><span class="r-ico"><i class="ph-bold ${ICONS[c.id] || 'ph-shield'}"></i></span><div class="r-t"><b>${esc(c.name)}${c.variant ? ' · ' + esc(c.variant) : ''}</b><small>${esc(c.no)}</small></div><b class="amt">${inr(c.price)}</b></div>`).join('')}
     <div style="display:flex;flex-direction:column;gap:10px;margin-top:18px">
       <button class="btn" data-act="receipt"><i class="ph-bold ph-download-simple"></i> Download receipt</button>
