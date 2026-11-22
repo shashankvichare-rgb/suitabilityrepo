@@ -12,22 +12,29 @@ Every page on symbo.si is behind one access gate. Nobody sees a demo without sig
 | Demo | Path | Invite id |
 |---|---|---|
 | Credit Life journey | `/demos/suitability-agent-journey/` | `creditlife` |
-| Agent journey · Rohan (consumer durable) | `/demos/agent-journey/` | `agentjourney` |
+| Agent journey · store & bank portals | `/demos/agent-journey/` | `agentjourney` |
 | Embedded widget · LoanBee checkout | `/demos/loanbee-checkout/` | `widget` |
 | Suitability engine | `/demos/suitabilityengine/` | `engine` |
 | Motor agent journey | `/demos/motor/` (proxied) | `motor` |
 | Pet insurance | `/demos/pet-insurance/` | `pet` |
 | Agent journey · consumer durables (earlier build) | `/demos/agent-suitaibility-demo/` | `agent` |
 
-### Agent journey (Rohan, consumer durable)
+### Agent journey (store and bank agent portals)
 
-Hub card 06. A store agent, Rohan (`SYM-AG-1042`), sells protection with a consumer durable loan:
-dashboard with dummy sales and retail products (coming soon) → customer and purchase → needs questions →
-"analysing" step → ranked recommendations → a pitch card per product (why it was chosen, script, limits, objection) →
-WhatsApp quote with a buy link → customer checkout (`buy.html`: per-product consent, demo OTP `123456`, mock payment) →
-consolidated audit trail logged on Rohan's name.
+Hub card 06. Opens on a sign-in page with two portals (store first). Desktop is a portal with a collapsible sidebar;
+below 1024 px it becomes a mobile app (drawer menu, sticky action bar, customer record as an accordion).
 
-- Products and rules: `demos/agent-journey/catalogue.js` (from the earlier consumer durable build). Pitch scripts: `pitch.js`. Agent, seeded sales and the share link: `store.js`.
+- **Ajay Sales Electronics** (store sales agent Rohan, `AJS-SA-1042`): dashboard of today's financed sales → pick an invoice →
+  customer & purchase → needs questions → recommendations (consumer durable add-ons) → pitch → WhatsApp quote.
+- **KBI Bank** (relationship manager Rohan Joshi, `KBI-RM-2087`): loan book of 10 sanctioned loans (₹30,000 to ₹2 Cr) with Loan ID
+  search (prefilled `KBI-PL-2611-04821`) → loan details → suitability (loan facts prefilled from the loan file) →
+  Personal Accident Shield, EMI Protect, Hospital Cash, Health & Wellness Plan, Card & UPI Safe. Credit Life is listed but not enabled.
+- Both: an "analysing" step, ranked recommendation cards, a pitch card per product (why it was chosen, script, limits, objection),
+  a customer record beside the journey and a records page with the full audit trail. Customer checkout (`buy.html`) is branded per
+  channel: per-product consent, OTP shown as an incoming SMS (`123456`), mock payment (KBI adds account debit).
+- Files: `app.js` (portal), `engines.js` (one interface over both channels, store invoices, seeded records), `bank.js` (loans,
+  questions, products, pricing, pitch), `catalogue.js` + `pitch.js` (store products and pitch), `store.js` (channels, storage, share link, sync).
+  Prices are illustrative.
 - The buy link carries the quote, so it opens on any signed-in device (a guest needs `agentjourney` on their invite; allow 2 devices if they use a laptop and a phone).
 - Cross-device sync: `netlify/functions/journey-api.mjs` (route `/api/journey/*`, Netlify Blobs store `agent-journey`). The buy page posts each customer action; Rohan's app polls its open quotes every 4 s and merges events by id, so a purchase on the customer's phone appears on the agent's screen. In the same browser it also updates instantly via localStorage. If the function is unreachable, both pages keep working locally.
 

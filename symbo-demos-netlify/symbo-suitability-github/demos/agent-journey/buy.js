@@ -1,19 +1,19 @@
-/* Agent Journey · customer buy page opened from Rohan's WhatsApp link.
-   The quote travels in the link, so it works on any device. If the agent app is open in this same
+/* Customer buy page opened from the agent's WhatsApp link (store or bank).
+   The quote travels in the link, so it works on any device. If the agent portal is open in this same
    browser, the sale's status and audit trail update there live. Nothing is charged or issued. */
-import { initialMasters } from './catalogue.js';
-import { AGENT, esc, inr, firstName, getSale, saveSale, log, eventId, postEvent, fetchStatus, decodeQuote } from './store.js';
-import { ICONS } from './pitch.js';
+import { CHANNELS, orgLogo, esc, inr, firstName, getSale, saveSale, log, eventId, postEvent, fetchStatus, decodeQuote } from './store.js';
+import { ENGINES } from './engines.js';
 
 const $ = s => document.querySelector(s);
-const CATALOGUE = Object.fromEntries(initialMasters.products.map(p => [p.id, p]));
 const DEMO_OTP = '123456';
 const B = { q: null, step: 'review', dec: {}, open: {}, method: 'upi', certs: [], err: '' };
+let CH = CHANNELS.store, ENGINE = ENGINES.store, AGENT = CH.agent, ICONS = ENGINE.icons;
+const CATALOGUE = { get: id => ENGINE.info(id) };
 
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 2600); }
 const accepted = () => B.q.items.filter(x => B.dec[x.id] === 'yes');
 const total = () => accepted().reduce((n, x) => n + x.price, 0);
-const nameOf = x => CATALOGUE[x.id]?.name || x.id;
+const nameOf = x => CATALOGUE.get(x.id)?.name || x.id;
 
 /* Every customer action goes to Rohan's record: straight into this browser's copy when the agent app
    shares it, and to the sync function so the agent sees it from another device. Same id both ways. */
@@ -48,7 +48,7 @@ function steps() {
 function vReview() {
   const q = B.q, first = firstName(q.name);
   const card = x => {
-    const p = CATALOGUE[x.id] || {}, d = B.dec[x.id];
+    const p = CATALOGUE.get(x.id) || {}, d = B.dec[x.id];
     let foot;
     if (d === 'yes') foot = `<p class="state yes"><i class="ph-fill ph-check-circle"></i> Accepted after reading the terms <button data-change="${x.id}">Change</button></p>`;
     else if (d === 'no') foot = `<p class="state no"><i class="ph-bold ph-minus-circle"></i> Not taken <button data-change="${x.id}">Change</button></p>`;
@@ -61,8 +61,9 @@ function vReview() {
       <p class="p-desc">${esc(p.description || '')}</p>${foot}</article>`;
   };
   const n = accepted().length;
-  return `<section class="b-hero"><p class="eyebrow light">Quote ${esc(q.ref)}</p><h1>Hi ${esc(first)}, here is the cover you discussed</h1><p>For your ${esc(q.model)} (${esc(q.asset)}). Choose each one yourself. Nothing is selected for you.</p>
-      <div class="from"><span class="av">R</span><span>Shared by ${esc(AGENT.name)} · ${esc(AGENT.store)}</span></div></section>
+  const forWhat = q.channel === 'bank' ? `For your ${esc(q.subject.toLowerCase())} ${esc(q.subjectDetail.split(' · ')[0])}.` : `For your ${esc(q.subjectDetail)} (${esc(q.subject)}).`;
+  return `<section class="b-hero"><p class="eyebrow light">Quote ${esc(q.ref)}</p><h1>Hi ${esc(first)}, here is the cover you discussed</h1><p>${forWhat} Choose each one yourself. Nothing is selected for you.</p>
+      <div class="from"><span class="av">${esc(AGENT.name.split(' ').map(x => x[0]).join(''))}</span><span>Shared by ${esc(AGENT.name)} · ${esc(CH.org)}, ${esc(AGENT.branch.split(',')[0])}</span></div></section>
     ${steps()}
     ${q.items.map(card).join('')}
     <div class="sticky-pay"><div class="tot"><span>${n ? `${n} product${n > 1 ? 's' : ''} selected` : 'Accept at least one product to continue'}</span><b>${inr(total())}</b></div>
@@ -76,14 +77,15 @@ function vVerify() {
       <div class="f full"><span>Name</span><b>${esc(q.name)}</b></div>
       <div class="f full"><span>Email</span><b>${esc(q.email)}</b></div>
     </div></div>
-    <div class="otp">${[0, 1, 2, 3, 4, 5].map(i => `<input inputmode="numeric" maxlength="1" aria-label="Digit ${i + 1}" data-otp="${i}">`).join('')}</div>
-    <span class="demo-code"><i class="ph-bold ph-info"></i> Demo code: ${DEMO_OTP}</span>
+    <div class="sms" role="status"><span class="sms-ico"><i class="ph-fill ph-chat-circle-text"></i></span><div><b>${esc(CH.short)} · now</b><span>${DEMO_OTP} is your code to confirm quote ${esc(q.ref)}. Do not share it with anyone.</span></div></div>
+    <div class="otp">${[0, 1, 2, 3, 4, 5].map(i => `<input inputmode="numeric" maxlength="1" autocomplete="one-time-code" aria-label="Digit ${i + 1}" data-otp="${i}">`).join('')}</div>
     ${B.err ? `<p class="err-inline" role="alert">${esc(B.err)}</p>` : ''}
     <div class="sticky-pay"><div class="tot"><span>To pay</span><b>${inr(total())}</b></div><button class="btn" data-act="verify">Verify and continue</button></div>`;
 }
 
 function vPay() {
-  const m = [['upi', 'ph-qr-code', 'UPI', 'Any UPI app'], ['card', 'ph-credit-card', 'Debit or credit card', 'Visa, Mastercard, RuPay'], ['nb', 'ph-bank', 'Net banking', 'All major banks']];
+  const m = [...(B.q.channel === 'bank' ? [['acct', 'ph-bank', 'KBI savings account', 'Debit from your account ending 4821']] : []),
+    ['upi', 'ph-qr-code', 'UPI', 'Any UPI app'], ['card', 'ph-credit-card', 'Debit or credit card', 'Visa, Mastercard, RuPay'], ['nb', 'ph-buildings', 'Net banking', 'All major banks']];
   return `${steps()}<h2 class="s-title">Pay ${inr(total())}</h2><p class="s-sub">${accepted().map(x => esc(nameOf(x))).join(' · ')}</p>
     <div class="methods">${m.map(([id, ic, t, s]) => `<label class="method"><input type="radio" name="m" value="${id}" ${B.method === id ? 'checked' : ''}><i class="ph-bold ${ic}"></i><span><b>${t}</b><small>${s}</small></span></label>`).join('')}</div>
     <div class="sticky-pay"><div class="tot"><span>Total · GST included</span><b>${inr(total())}</b></div><button class="btn" data-act="pay"><i class="ph-bold ph-lock-simple"></i> Pay ${inr(total())}</button></div>`;
@@ -97,7 +99,7 @@ function vDone() {
     ${B.certs.map(c => `<div class="cert"><span class="r-ico"><i class="ph-bold ${ICONS[c.id] || 'ph-shield'}"></i></span><div class="r-t"><b>${esc(c.name)}${c.variant ? ' · ' + esc(c.variant) : ''}</b><small>${esc(c.no)}</small></div><b class="amt">${inr(c.price)}</b></div>`).join('')}
     <div style="display:flex;flex-direction:column;gap:10px;margin-top:18px">
       <button class="btn" data-act="receipt"><i class="ph-bold ph-download-simple"></i> Download receipt</button>
-      <p class="hint" style="justify-content:center"><i class="ph-bold ph-user-circle"></i> ${esc(AGENT.name)} at ${esc(AGENT.store)} has been notified.</p>
+      <p class="hint" style="justify-content:center"><i class="ph-bold ph-user-circle"></i> ${esc(AGENT.name)} at ${esc(CH.org)} has been notified.</p>
     </div>`;
 }
 
@@ -122,7 +124,7 @@ document.addEventListener('click', e => {
   switch (t.dataset.act) {
     case 'verify': {
       const code = [...document.querySelectorAll('[data-otp]')].map(i => i.value).join('');
-      if (code !== DEMO_OTP) { B.err = 'That code is not right. Use the demo code shown.'; return render(); }
+      if (code !== DEMO_OTP) { B.err = 'That code is not right. Check the SMS and try again.'; return render(); }
       record(`Verified by OTP on the mobile ending ${B.q.mobileLast4}`); return go('pay');
     }
     case 'pay': {
@@ -131,7 +133,7 @@ document.addEventListener('click', e => {
       setTimeout(() => {
         const items = accepted();
         B.certs = items.map(x => ({ ...x, name: nameOf(x), no: `SYM/${x.id.toUpperCase()}/${B.q.ref.slice(-4)}/${Math.floor(10000 + Math.random() * 90000)}` }));
-        const method = { upi: 'UPI', card: 'card', nb: 'net banking' }[B.method];
+        const method = { acct: 'KBI account debit', upi: 'UPI', card: 'card', nb: 'net banking' }[B.method];
         record(`Paid ${inr(total())} by ${method} and bought ${items.length} product${items.length > 1 ? 's' : ''}`, B.certs.map(c => `${c.name}: ${c.no}`).join(' · '), {
           status: 'Purchased', total: total(), items: items.map(x => ({ id: x.id, variant: x.variant, price: x.price })),
           patch: sale => {
@@ -146,7 +148,7 @@ document.addEventListener('click', e => {
     }
     case 'receipt': {
       const q = B.q;
-      const lines = ['LOANBEE · PROTECTION RECEIPT (DEMO)', `Quote ${q.ref}`, `Customer: ${q.name} · ${q.email}`, `Purchase: ${q.model} (${q.asset})`, `Sold by: ${AGENT.name} (${AGENT.id}) · ${AGENT.store}`, '', ...B.certs.map(c => `${c.name}${c.variant ? ' · ' + c.variant : ''} · ${inr(c.price)} · certificate ${c.no}`), '', `Total paid: ${inr(total())} (GST included)`, `Date: ${new Date().toLocaleString('en-IN')}`, '', 'Demonstration only. No payment was collected and no policy was issued.'];
+      const lines = [`${CH.org.toUpperCase()} · PROTECTION RECEIPT`, `Quote ${q.ref}`, `Customer: ${q.name} · ${q.email}`, `${q.channel === 'bank' ? 'Loan' : 'Purchase'}: ${q.subject} · ${q.subjectDetail}`, `Sold by: ${AGENT.name} (${AGENT.id}) · ${CH.org}, ${AGENT.branch}`, '', ...B.certs.map(c => `${c.name}${c.variant ? ' · ' + c.variant : ''} · ${inr(c.price)} · certificate ${c.no}`), '', `Total paid: ${inr(total())} (GST included)`, `Date: ${new Date().toLocaleString('en-IN')}`, '', 'Generated on the Symbo platform.'];
       const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/plain' })); a.download = `receipt-${q.ref}.txt`; a.click();
       return;
     }
@@ -180,6 +182,9 @@ function showBought(items, events) {
 (async () => {
   const m = /[#&]q=([A-Za-z0-9_-]+)/.exec(location.hash);
   B.q = m ? decodeQuote(m[1]) : null;
+  if (B.q) { CH = CHANNELS[B.q.channel]; ENGINE = ENGINES[B.q.channel]; AGENT = CH.agent; ICONS = ENGINE.icons; }
+  $('#brand').innerHTML = `${orgLogo(CH.id, 26)}<span>${esc(CH.org)}</span>`;
+  document.title = `Your protection quote · ${CH.org}`;
   if (!B.q) return go('invalid');
   const sale = getSale(B.q.ref);
   if (sale && sale.status === 'Purchased') return showBought(sale.quote.items, sale.audit);

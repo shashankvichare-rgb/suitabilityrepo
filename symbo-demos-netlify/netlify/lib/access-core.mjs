@@ -11,7 +11,7 @@ export const TEAM_HOURS = 12;
 export const DEMOS = [
   { id: 'widget', name: 'Embedded widget · LoanBee checkout', home: '/demos/loanbee-checkout/', prefixes: ['/demos/loanbee-checkout'] },
   { id: 'creditlife', name: 'Credit Life journey', home: '/demos/suitability-agent-journey/', prefixes: ['/demos/suitability-agent-journey'] },
-  { id: 'agentjourney', name: 'Agent journey · Rohan (consumer durable)', home: '/demos/agent-journey/', prefixes: ['/demos/agent-journey', '/api/journey'] },
+  { id: 'agentjourney', name: 'Agent journey · store & bank portals', home: '/demos/agent-journey/', prefixes: ['/demos/agent-journey', '/api/journey'] },
   { id: 'agent', name: 'Agent journey · consumer durables (earlier build)', home: '/demos/agent-suitaibility-demo/', prefixes: ['/demos/agent-suitaibility-demo', '/demos/agent-suitability-demo'] },
   { id: 'engine', name: 'Suitability engine', home: '/demos/suitabilityengine/', prefixes: ['/demos/suitabilityengine'] },
   { id: 'motor', name: 'Motor agent journey', home: '/demos/motor/', prefixes: ['/demos/motor'] },
@@ -26,9 +26,9 @@ export function isPublicPath(path) {
     path === '/favicon.ico' || path === '/robots.txt';
 }
 
-/* Paths every signed-in visitor may load regardless of invite scope (the hub and its logo). */
+/* Paths every signed-in visitor may load regardless of invite scope (the hub, its logo and its unpacked assets). */
 export function isHubPath(path) {
-  return path === '/' || path === '/index.html' || path === '/symbo-logo.png';
+  return path === '/' || path === '/index.html' || path === '/symbo-logo.png' || path.startsWith('/hub/');
 }
 
 export function demoForPath(path) {

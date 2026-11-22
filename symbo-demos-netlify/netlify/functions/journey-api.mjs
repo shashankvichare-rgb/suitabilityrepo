@@ -7,10 +7,10 @@
 import { getStore } from '@netlify/blobs';
 
 const store = () => getStore({ name: 'agent-journey', consistency: 'strong' });
-const REF = /^AJ-\d{6}-\d{4}$/;
+const REF = /^(AJ|KB)-\d{6}-\d{4}$/;   /* AJ = store quotes, KB = KBI Bank quotes */
 const EVENT_ID = /^[A-Za-z0-9_-]{6,40}$/;
 const STAGES = new Set(['Consent', 'Purchase']);
-const PRODUCTS = new Set(['ew', 'adld', 'health', 'epicure', 'galaxy', 'insta']);
+const PRODUCTS = new Set(['ew', 'adld', 'health', 'epicure', 'galaxy', 'insta', 'pa', 'emi', 'hospicash', 'wellness', 'cardsafe']);
 const MAX_EVENTS = 60;
 
 const json = (status, body) => new Response(JSON.stringify(body), {
