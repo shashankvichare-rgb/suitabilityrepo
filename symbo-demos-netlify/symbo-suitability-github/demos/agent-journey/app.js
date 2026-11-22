@@ -1,6 +1,6 @@
 /* Agent Journey · Rohan's agent app (consumer durable protection). Fictional data, browser-local. */
 import { ew, initialMasters, relevantQuestions, validateApplication, assess } from './catalogue.js';
-import { AGENT, AGENT_LABEL, esc, inr, firstName, when, stamp, load, resetAll, saveSale, getSale, log, newRef, encodeQuote, stats, STORAGE_KEY } from './store.js';
+import { AGENT, AGENT_LABEL, esc, inr, firstName, when, stamp, load, resetAll, saveSale, getSale, log, newRef, encodeQuote, stats, STORAGE_KEY, PRODUCT_NAMES, fetchStatus } from './store.js';
 import { ICONS, signals, pitchFor, RETAIL } from './pitch.js';
 
 const M = initialMasters;
@@ -422,18 +422,50 @@ function download() {
   a.download = `audit-${s.ref}.txt`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
 
-/* Customer purchases in another tab of this browser update Rohan's dashboard live. */
-window.addEventListener('storage', e => {
-  if (e.key !== STORAGE_KEY) return;
+/* Live updates from the customer: another tab of this browser (storage event) or another device (sync poll). */
+const OPEN = ['Quote ready', 'Quote shared', 'Viewed'];
+function refresh(bought = []) {
   const before = S.sale ? S.sale.status : null;
   S.data = load();
   if (S.sale) {
     const fresh = getSale(S.sale.ref);
-    if (fresh) { S.sale.status = fresh.status; S.sale.audit = fresh.audit; S.sale.purchasedAt = fresh.purchasedAt; }
-    if (before !== 'Purchased' && S.sale.status === 'Purchased') toast(`${firstName(S.sale.customer.name)} just bought ${S.sale.quote.items.length} product${S.sale.quote.items.length > 1 ? 's' : ''}.`);
+    /* Only once a quote is out: before that, the sale in memory has answers not yet saved. */
+    if (fresh && (OPEN.includes(S.sale.status) || fresh.status === 'Purchased')) { S.sale.status = fresh.status; S.sale.audit = fresh.audit; S.sale.purchasedAt = fresh.purchasedAt; S.sale.quote = fresh.quote; S.sale.offered = fresh.offered; }
+    if (before !== 'Purchased' && S.sale.status === 'Purchased' && !bought.includes(S.sale)) bought = [...bought, S.sale];
   }
+  for (const s of bought) toast(`${firstName(s.customer.name)} just bought ${s.quote.items.length} product${s.quote.items.length > 1 ? 's' : ''} · ${inr(s.quote.total)}`);
   if (['dash', 'share', 'audit'].includes(S.view)) render(); else renderRecord();
-});
+}
+window.addEventListener('storage', e => { if (e.key === STORAGE_KEY) refresh(); });
+
+let syncing = false;
+async function sync() {
+  if (syncing || document.visibilityState === 'hidden') return;
+  const open = load().sales.filter(s => !s.seed && OPEN.includes(s.status) && Date.now() - s.createdAt < 3 * 864e5);
+  if (!open.length) return;
+  syncing = true;
+  try {
+    const remote = await fetchStatus(open.map(s => s.ref));
+    if (!remote) return;
+    const bought = [];
+    let changed = false;
+    for (const s of open) {
+      const d = remote[s.ref]; if (!d) continue;
+      let touched = false;
+      const have = new Set((s.audit || []).map(e => e.id).filter(Boolean));
+      for (const e of d.events || []) if (!have.has(e.id)) { (s.audit ||= []).push({ at: e.at, actor: 'Customer', stage: e.stage, text: e.text, detail: e.detail || '', id: e.id }); touched = true; }
+      if (d.status === 'Purchased' && s.status !== 'Purchased') {
+        s.status = 'Purchased'; s.purchasedAt = d.purchasedAt; s.offered = s.offered || s.quote.items;
+        s.quote = { ...s.quote, items: (d.items || []).map(x => ({ id: x.id, name: PRODUCT_NAMES[x.id] || x.id, variant: x.variant, price: x.price })), total: d.total };
+        bought.push(s); touched = true;
+      } else if (d.status === 'Viewed' && (s.status === 'Quote ready' || s.status === 'Quote shared')) { s.status = 'Viewed'; touched = true; }
+      if (touched) { saveSale(s); changed = true; }
+    }
+    if (changed) refresh(bought);
+  } finally { syncing = false; }
+}
+setInterval(sync, 4000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') sync(); });
 
 /* status bar clock */
 function tick() { const el = $('#clock'); if (el) el.textContent = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }

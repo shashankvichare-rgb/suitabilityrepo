@@ -2,7 +2,7 @@
    The quote travels in the link, so it works on any device. If the agent app is open in this same
    browser, the sale's status and audit trail update there live. Nothing is charged or issued. */
 import { initialMasters } from './catalogue.js';
-import { AGENT, esc, inr, firstName, getSale, saveSale, log } from './store.js';
+import { AGENT, esc, inr, firstName, getSale, saveSale, log, eventId, postEvent, fetchStatus, decodeQuote } from './store.js';
 import { ICONS } from './pitch.js';
 
 const $ = s => document.querySelector(s);
@@ -15,13 +15,28 @@ const accepted = () => B.q.items.filter(x => B.dec[x.id] === 'yes');
 const total = () => accepted().reduce((n, x) => n + x.price, 0);
 const nameOf = x => CATALOGUE[x.id]?.name || x.id;
 
-/* Mirror the customer's actions into Rohan's record when the sale lives in this browser. */
-function record(text, detail = '', patch) {
+/* Every customer action goes to Rohan's record: straight into this browser's copy when the agent app
+   shares it, and to the sync function so the agent sees it from another device. Same id both ways. */
+function record(text, detail = '', opts = {}) {
+  const id = eventId();
+  const stage = opts.status === 'Purchased' ? 'Purchase' : 'Consent';
   const sale = getSale(B.q.ref);
-  if (!sale) return;
-  if (patch) patch(sale);
-  log(sale, 'Customer', patch && sale.status === 'Purchased' ? 'Purchase' : 'Consent', text, detail);
-  saveSale(sale);
+  if (sale) {
+    if (opts.patch) opts.patch(sale);
+    log(sale, 'Customer', stage, text, detail, id);
+    saveSale(sale);
+  }
+  postEvent({ ref: B.q.ref, id, stage, text, detail, status: opts.status, items: opts.items, total: opts.total });
+}
+/* Certificate numbers are kept in the purchase event's detail ("Name: SYM/..."). */
+function certsFrom(items, events) {
+  const detail = (events || []).find(e => e.stage === 'Purchase')?.detail || '';
+  return items.map(x => {
+    const name = nameOf(x);
+    const at = detail.indexOf(name + ': ');
+    const no = at < 0 ? '' : detail.slice(at + name.length + 2).split(' ')[0];
+    return { ...x, name, no };
+  });
 }
 
 function steps() {
@@ -117,10 +132,13 @@ document.addEventListener('click', e => {
         const items = accepted();
         B.certs = items.map(x => ({ ...x, name: nameOf(x), no: `SYM/${x.id.toUpperCase()}/${B.q.ref.slice(-4)}/${Math.floor(10000 + Math.random() * 90000)}` }));
         const method = { upi: 'UPI', card: 'card', nb: 'net banking' }[B.method];
-        record(`Paid ${inr(total())} by ${method} and bought ${items.length} product${items.length > 1 ? 's' : ''}`, B.certs.map(c => `${c.name}: ${c.no}`).join(' · '), sale => {
-          sale.status = 'Purchased'; sale.purchasedAt = Date.now();
-          sale.offered = sale.offered || sale.quote.items;
-          sale.quote = { ...sale.quote, items: items.map(x => ({ id: x.id, name: nameOf(x), variant: x.variant, price: x.price })), total: total() };
+        record(`Paid ${inr(total())} by ${method} and bought ${items.length} product${items.length > 1 ? 's' : ''}`, B.certs.map(c => `${c.name}: ${c.no}`).join(' · '), {
+          status: 'Purchased', total: total(), items: items.map(x => ({ id: x.id, variant: x.variant, price: x.price })),
+          patch: sale => {
+            sale.status = 'Purchased'; sale.purchasedAt = Date.now();
+            sale.offered = sale.offered || sale.quote.items;
+            sale.quote = { ...sale.quote, items: items.map(x => ({ id: x.id, name: nameOf(x), variant: x.variant, price: x.price })), total: total() };
+          }
         });
         go('done');
       }, 1800);
@@ -154,13 +172,23 @@ document.addEventListener('keydown', e => {
 });
 
 /* boot */
-import('./store.js').then(({ decodeQuote }) => {
+function showBought(items, events) {
+  B.q.items.forEach(x => { B.dec[x.id] = items.some(i => i.id === x.id) ? 'yes' : 'no'; });
+  B.certs = certsFrom(B.q.items.filter(x => B.dec[x.id] === 'yes'), events);
+  go('done');
+}
+(async () => {
   const m = /[#&]q=([A-Za-z0-9_-]+)/.exec(location.hash);
   B.q = m ? decodeQuote(m[1]) : null;
   if (!B.q) return go('invalid');
-  if (B.q.expiresAt && Date.now() > B.q.expiresAt) return go('expired');
   const sale = getSale(B.q.ref);
-  if (sale && sale.status === 'Purchased') { B.q.items.forEach(x => { B.dec[x.id] = (sale.quote.items.some(i => i.id === x.id)) ? 'yes' : 'no'; }); B.certs = sale.quote.items.map(x => ({ ...x, no: (sale.audit.find(a => a.stage === 'Purchase')?.detail.match(new RegExp(x.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ': (\\S+)')) || [])[1] || '' })); return go('done'); }
-  record('Opened the quote link', '', s => { if (['Quote ready', 'Quote shared'].includes(s.status)) s.status = 'Viewed'; });
+  if (sale && sale.status === 'Purchased') return showBought(sale.quote.items, sale.audit);
+  if (!sale) {
+    /* Opened on another device: if it was already bought, show the policy instead of a fresh quote. */
+    const remote = (await fetchStatus([B.q.ref]))?.[B.q.ref];
+    if (remote && remote.status === 'Purchased') return showBought(remote.items || [], remote.events);
+  }
+  if (B.q.expiresAt && Date.now() > B.q.expiresAt) return go('expired');
+  record('Opened the quote link', '', { status: 'Viewed', patch: s => { if (['Quote ready', 'Quote shared'].includes(s.status)) s.status = 'Viewed'; } });
   go('review');
-});
+})();

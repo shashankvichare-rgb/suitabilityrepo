@@ -43,11 +43,33 @@ export function saveSale(sale) {
   write(s);
   return sale;
 }
-export function getSale(ref) { return load().sales.find(x => x.ref === ref) || null; }
+/* Read-only lookup: never seeds, so a customer's own phone does not get Rohan's demo data. */
+export function getSale(ref) { const s = read(); return (s && Array.isArray(s.sales) && s.sales.find(x => x.ref === ref)) || null; }
 export const STORAGE_KEY = KEY;
 
-export function log(sale, actor, stage, text, detail = '') {
-  (sale.audit ||= []).push({ at: Date.now(), actor, stage, text, detail });
+export const eventId = () => 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+export function log(sale, actor, stage, text, detail = '', id = eventId()) {
+  (sale.audit ||= []).push({ at: Date.now(), actor, stage, text, detail, id });
+}
+
+/* ── cross-device sync (Netlify function behind the access gate; silently off when unavailable) ── */
+export const SYNC_URL = '/api/journey/';
+export async function postEvent(ev, retries = 1) {
+  try {
+    const r = await fetch(SYNC_URL + 'event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(ev), keepalive: true, credentials: 'same-origin' });
+    if (r.ok) return true;
+    /* Retry once on a write conflict or server hiccup; the event id makes a repeat harmless. */
+    if (retries > 0 && (r.status === 409 || r.status >= 500)) { await new Promise(res => setTimeout(res, 400)); return postEvent(ev, retries - 1); }
+    return false;
+  } catch { return false; }
+}
+export async function fetchStatus(refs) {
+  if (!refs.length) return null;
+  try {
+    const r = await fetch(SYNC_URL + 'status?refs=' + encodeURIComponent(refs.join(',')), { cache: 'no-store', credentials: 'same-origin' });
+    if (!r.ok || !(r.headers.get('content-type') || '').includes('application/json')) return null;
+    return (await r.json()).sales || null;
+  } catch { return null; }
 }
 export function newRef() {
   const d = new Date();

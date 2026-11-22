@@ -28,7 +28,8 @@ WhatsApp quote with a buy link → customer checkout (`buy.html`: per-product co
 consolidated audit trail logged on Rohan's name.
 
 - Products and rules: `demos/agent-journey/catalogue.js` (from the earlier consumer durable build). Pitch scripts: `pitch.js`. Agent, seeded sales and the share link: `store.js`.
-- The buy link carries the quote, so it opens on any signed-in device. Rohan's dashboard updates live only when the customer buys in the same browser (localStorage).
+- The buy link carries the quote, so it opens on any signed-in device (a guest needs `agentjourney` on their invite; allow 2 devices if they use a laptop and a phone).
+- Cross-device sync: `netlify/functions/journey-api.mjs` (route `/api/journey/*`, Netlify Blobs store `agent-journey`). The buy page posts each customer action; Rohan's app polls its open quotes every 4 s and merges events by id, so a purchase on the customer's phone appears on the agent's screen. In the same browser it also updates instantly via localStorage. If the function is unreachable, both pages keep working locally.
 
 ### Credit Life journey (Suitability Agent Journey)
 

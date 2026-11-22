@@ -19,6 +19,13 @@
   status = 200
   force = true
 
+# Agent Journey sync: customer events from the buy page, polled by Rohan's app.
+[[redirects]]
+  from = "/api/journey/*"
+  to = "/.netlify/functions/journey-api/:splat"
+  status = 200
+  force = true
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/pet-api/:splat"
