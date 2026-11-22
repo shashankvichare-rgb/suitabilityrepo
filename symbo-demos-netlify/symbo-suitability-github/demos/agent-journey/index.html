@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#011a14">
+<title>Agent Journey · Symbo</title>
+<link rel="icon" href="./assets/symbo-mark.png">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<div class="stage">
+  <aside class="side left">
+    <img class="logo" src="./assets/symbo-logo.png" alt="Symbo">
+    <p class="eyebrow">Agent journey · Consumer durable</p>
+    <h1>Rohan sells cover <em>the suitable way.</em></h1>
+    <p class="lede">A store agent selling a loan-linked purchase. Symbo turns a short needs conversation into ranked recommendations, a pitch script for each, and a WhatsApp quote the customer can buy from.</p>
+    <div class="panel how">
+      <p class="eyebrow">Run the demo</p>
+      <ol>
+        <li>Start a new sale from Rohan's dashboard.</li>
+        <li>Ask the customer the needs questions.</li>
+        <li>Watch recommendations come in, then pitch each one.</li>
+        <li>Share the quote on WhatsApp and open the link.</li>
+        <li>Buy as the customer. Rohan's dashboard updates.</li>
+      </ol>
+    </div>
+    <p class="foot">Fictional customer, products and prices. Nothing is sent, charged or issued. Data stays in this browser. <button class="linkbtn" data-act="reset">Reset demo data</button></p>
+  </aside>
+
+  <main class="center">
+    <div class="phone">
+      <div class="island"></div>
+      <div class="screen">
+        <div class="statusbar"><span id="clock">12:35</span><span class="sb-icons"><span><b style="height:4px"></b><b style="height:6px"></b><b style="height:8px"></b><b style="height:10px"></b></span><i></i></span></div>
+        <div id="app"></div>
+      </div>
+    </div>
+  </main>
+
+  <aside class="side right panel" id="record" aria-live="polite"></aside>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script type="module" src="./app.js"></script>
+</body>
+</html>

@@ -1,0 +1,64 @@
+/* Customer buy page · uses the tokens and components in style.css */
+body.buy { background: var(--warm); min-height: 100vh; }
+.shell { max-width: 480px; margin: 0 auto; min-height: 100vh; background: #fff; display: flex; flex-direction: column; box-shadow: 0 0 0 1px var(--line); }
+.b-top { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: #fff; z-index: 5; }
+.lb { display: flex; align-items: center; gap: 8px; font: 700 17px var(--fd); color: #141414; }
+.lb i { width: 18px; height: 18px; border-radius: 5px; background: #ffc81e; display: grid; place-items: center; }
+.lb i::after { content: ''; width: 8px; height: 8px; border-radius: 2px; background: #141414; }
+.pw { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--g500); }
+.pw img { height: 16px; }
+.b-main { flex: 1; padding: 18px 18px 28px; }
+.b-foot { font-size: 11px; color: var(--g500); text-align: center; padding: 14px 18px 22px; border-top: 1px solid var(--line); line-height: 1.5; }
+.b-hero { background: var(--hero); color: #fff; border-radius: 18px; padding: 18px; position: relative; overflow: hidden; }
+.b-hero::before { content: ''; position: absolute; right: -70px; top: -80px; width: 220px; height: 220px; border-radius: 50%; background: radial-gradient(closest-side, rgba(0,209,130,.3), transparent 70%); }
+.b-hero h1 { font: 600 22px/1.2 var(--fd); margin: 6px 0 6px; letter-spacing: -.02em; position: relative; }
+.b-hero p { margin: 0; font-size: 13px; color: rgba(255,255,255,.7); line-height: 1.5; position: relative; }
+.from { display: flex; align-items: center; gap: 10px; margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.12); position: relative; font-size: 12.5px; color: rgba(255,255,255,.8); }
+.from .av { width: 30px; height: 30px; border-radius: 50%; background: var(--grad-cta); display: grid; place-items: center; font: 700 13px var(--fd); color: #fff; }
+.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 16px 0 6px; }
+.steps div { display: flex; flex-direction: column; gap: 5px; font-size: 10.5px; font-weight: 600; color: var(--g400); }
+.steps div i { height: 4px; border-radius: 99px; background: var(--line); }
+.steps div.done { color: var(--green-dark); } .steps div.done i { background: var(--green-dark); }
+.steps div.cur { color: var(--ink); } .steps div.cur i { background: var(--green); }
+.prod { border: 1px solid var(--line); border-radius: 16px; padding: 14px; margin-top: 12px; transition: border-color .2s ease, box-shadow .2s ease; }
+.prod.ok { border-color: var(--green); box-shadow: 0 0 0 3px var(--green-wash); }
+.prod.off { opacity: .75; }
+.p-top { display: flex; gap: 10px; align-items: center; }
+.p-top .r-t b { font-size: 15px; }
+.p-top .amt { font: 600 17px var(--fd); color: var(--blue); }
+.p-desc { font-size: 13px; color: var(--g700); line-height: 1.5; margin: 10px 0 0; }
+.terms { margin-top: 10px; background: var(--surface); border-radius: 12px; padding: 12px; font-size: 12.5px; line-height: 1.6; color: var(--g700); max-height: 160px; overflow-y: auto; }
+.consent { display: flex; gap: 10px; align-items: flex-start; margin-top: 10px; font-size: 13px; line-height: 1.45; cursor: pointer; }
+.consent input { width: 20px; height: 20px; margin: 0; accent-color: var(--green-dark); flex: none; }
+.p-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.p-actions .btn { padding: 11px 12px; font-size: 14px; }
+.state { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 12.5px; font-weight: 600; }
+.state.yes { color: var(--green-dark); } .state.no { color: var(--g500); }
+.state button { margin-left: auto; border: 0; background: none; font-size: 12px; text-decoration: underline; color: var(--g500); }
+.sticky-pay { position: sticky; bottom: 0; background: #fff; border-top: 1px solid var(--line); margin: 18px -18px -28px; padding: 14px 18px 18px; }
+.tot { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; font-size: 13px; color: var(--g700); }
+.tot b { font: 600 22px var(--fd); color: var(--blue); }
+.otp { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin: 14px 0 8px; }
+.otp input { width: 100%; aspect-ratio: 1 / 1.15; text-align: center; font: 600 22px var(--fd); border: 1.5px solid var(--line2); border-radius: 12px; }
+.otp input:focus { outline: 2px solid var(--green); border-color: var(--green); }
+.demo-code { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; color: var(--amber); background: var(--yellow-tint); padding: 6px 10px; border-radius: 999px; }
+.methods { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.method { display: flex; align-items: center; gap: 12px; border: 1.5px solid var(--line2); border-radius: 14px; padding: 13px 14px; cursor: pointer; }
+.method input { accent-color: var(--green-dark); width: 18px; height: 18px; margin: 0; }
+.method i { font-size: 22px; color: var(--blue); }
+.method b { font: 600 14px var(--fd); display: block; } .method small { font-size: 12px; color: var(--g500); }
+.method:has(input:checked) { border-color: var(--green); background: var(--green-wash); }
+.paying { text-align: center; padding: 50px 10px; }
+.paying .cmp-mark { margin: 0 auto 18px; }
+.done-hero { text-align: center; padding: 18px 6px 6px; }
+.done-hero .tick { width: 72px; height: 72px; border-radius: 50%; background: var(--green-tint); color: var(--green-dark); display: grid; place-items: center; font-size: 38px; margin: 0 auto 14px; animation: popin .5s cubic-bezier(.2,.9,.3,1.3) both; }
+.done-hero h1 { font: 600 24px var(--fd); color: var(--blue); margin: 0 0 6px; letter-spacing: -.02em; }
+.done-hero p { margin: 0; font-size: 13.5px; color: var(--g700); line-height: 1.5; }
+.cert { display: flex; gap: 10px; align-items: center; border: 1px solid var(--line); border-radius: 14px; padding: 12px; margin-top: 10px; }
+.cert .r-t small { font-family: var(--fm); font-size: 11px; color: var(--green-dark); }
+.cert b.amt { font: 600 14px var(--fd); }
+.empty { text-align: center; padding: 60px 10px; }
+.empty i { font-size: 42px; color: var(--g400); }
+.empty h1 { font: 600 20px var(--fd); color: var(--blue); }
+.empty p { font-size: 13.5px; color: var(--g700); line-height: 1.5; }
+.err-inline { color: var(--red); font-size: 13px; margin: 6px 0 0; }

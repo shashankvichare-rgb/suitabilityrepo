@@ -10,7 +10,8 @@ export const TEAM_HOURS = 12;
    Add a row here when a new demo ships; guests can only open demos listed on their invite. */
 export const DEMOS = [
   { id: 'widget', name: 'Embedded widget · LoanBee checkout', home: '/demos/loanbee-checkout/', prefixes: ['/demos/loanbee-checkout'] },
-  { id: 'creditlife', name: 'Suitability Agent Journey · Credit Life', home: '/demos/suitability-agent-journey/', prefixes: ['/demos/suitability-agent-journey'] },
+  { id: 'creditlife', name: 'Credit Life journey', home: '/demos/suitability-agent-journey/', prefixes: ['/demos/suitability-agent-journey'] },
+  { id: 'agentjourney', name: 'Agent journey · Rohan (consumer durable)', home: '/demos/agent-journey/', prefixes: ['/demos/agent-journey'] },
   { id: 'agent', name: 'Agent journey · consumer durables (earlier build)', home: '/demos/agent-suitaibility-demo/', prefixes: ['/demos/agent-suitaibility-demo', '/demos/agent-suitability-demo'] },
   { id: 'engine', name: 'Suitability engine', home: '/demos/suitabilityengine/', prefixes: ['/demos/suitabilityengine'] },
   { id: 'motor', name: 'Motor agent journey', home: '/demos/motor/', prefixes: ['/demos/motor'] },

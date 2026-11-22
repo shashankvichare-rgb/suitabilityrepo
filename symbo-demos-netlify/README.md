@@ -11,14 +11,26 @@ Every page on symbo.si is behind one access gate. Nobody sees a demo without sig
 
 | Demo | Path | Invite id |
 |---|---|---|
-| Suitability Agent Journey · Credit Life | `/demos/suitability-agent-journey/` | `creditlife` |
+| Credit Life journey | `/demos/suitability-agent-journey/` | `creditlife` |
+| Agent journey · Rohan (consumer durable) | `/demos/agent-journey/` | `agentjourney` |
 | Embedded widget · LoanBee checkout | `/demos/loanbee-checkout/` | `widget` |
 | Suitability engine | `/demos/suitabilityengine/` | `engine` |
 | Motor agent journey | `/demos/motor/` (proxied) | `motor` |
 | Pet insurance | `/demos/pet-insurance/` | `pet` |
 | Agent journey · consumer durables (earlier build) | `/demos/agent-suitaibility-demo/` | `agent` |
 
-### Suitability Agent Journey (Credit Life)
+### Agent journey (Rohan, consumer durable)
+
+Hub card 06. A store agent, Rohan (`SYM-AG-1042`), sells protection with a consumer durable loan:
+dashboard with dummy sales and retail products (coming soon) → customer and purchase → needs questions →
+"analysing" step → ranked recommendations → a pitch card per product (why it was chosen, script, limits, objection) →
+WhatsApp quote with a buy link → customer checkout (`buy.html`: per-product consent, demo OTP `123456`, mock payment) →
+consolidated audit trail logged on Rohan's name.
+
+- Products and rules: `demos/agent-journey/catalogue.js` (from the earlier consumer durable build). Pitch scripts: `pitch.js`. Agent, seeded sales and the share link: `store.js`.
+- The buy link carries the quote, so it opens on any signed-in device. Rohan's dashboard updates live only when the customer buys in the same browser (localStorage).
+
+### Credit Life journey (Suitability Agent Journey)
 
 The hub's Agent card opens this. A LoanBee (fictional lender) agent adds Credit Life to a business loan:
 borrower → loan → needs + health declaration → offer (reducing, level or joint; added to loan or upfront) →
