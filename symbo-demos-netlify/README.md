@@ -39,6 +39,8 @@ Eight partner types, one customer each. Change a signal and the engine re-runs: 
 
 LoanBee checkout on the shared engine. Borrower panel on the left, decision record on the right (closed until opened; drawers on mobile). Five widget placements, switched with the arrows, dots, arrow keys or a swipe: inline card, EMI line switch, pre-sign sheet, checklist row, after approval. Adding always goes through one consent sheet (price, GST, free look, "loan does not depend on this"); skipping is never more than one tap. The previous page is kept at `classic.html`.
 
+**Compare with today** (scales button in the top bar) puts the same borrower through a bundled checkout as it is commonly sold now: three pre-ticked add-ons, deducted from the loan, one consent box, a countdown. Ten numbered pins on that screen each open the practice and the clause it breaks. The "Today" tab runs the engine over that fixed pack and shows which items this borrower had no use for, the rupees spent on them, and what they receive in hand either way. The pack and the list of practices live in `hub/engine/engine.js` (`LEGACY_PACK`, `LEGACY_VIOLATIONS`, `legacy()`). On a phone the two screens switch with "Sold today / With Symbo".
+
 ### Compliance content: where it comes from
 
 The markers, the 7-step compliant journey and the five per-policy records follow Symbo's practitioner's guide

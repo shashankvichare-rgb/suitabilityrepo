@@ -1,6 +1,6 @@
 /* Embedded widget journey · LoanBee checkout with the Symbo protection widget in five placements.
    The offer comes from the shared suitability engine; every customer action lands in the audit log. */
-import { PERSONAS, OPTIONS, run, markersFor, inr, short } from '/hub/engine/engine.js';
+import { PERSONAS, OPTIONS, run, legacy, LEGACY_VIOLATIONS, inr } from '/hub/engine/engine.js';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -21,7 +21,7 @@ const PLACEMENTS = [
   { key: 'post', name: 'After approval', where: 'Success screen, after money is sent', add: 2, skip: 0, best: 'Zero influence on the loan decision.', marks: ['Loan is already disbursed', 'Paid separately, not from loan money', 'Dismiss hides it for good'] }
 ];
 
-const S = { p: { ...PEOPLE[0] }, res: null, pl: 0, w: null, panel: null, drawer: null, pops: new Map() };
+const S = { p: { ...PEOPLE[0] }, res: null, pl: 0, w: null, panel: null, drawer: null, pops: new Map(), contrast: false, side: 'today', pin: null };
 const freshW = () => ({ added: null, sheet: null, open: false, skipped: false, more: false, dismissed: false, read: false });
 function pop(html) { const id = 'p' + S.pops.size; S.pops.set(id, html); return `data-pop="${id}"`; }
 const pick = () => S.res.picked[0] || null;
@@ -56,15 +56,16 @@ function vRecord() {
   const r = S.res, pl = PLACEMENTS[S.pl], t = S.panel || 'why';
   const tab = (k, icon, label) => `<button class="${t === k ? 'on' : ''}" data-panel="${k}"><i class="ph-bold ${icon}"></i>${label}</button>`;
   let body;
-  if (t === 'why') body = r.picked.length ? r.picked.map((x, i) => `<div class="why"><div class="why-h"><span class="rk">${i + 1}</span><b>${esc(x.name)}</b><em>${x.score}</em></div><div class="chips">${(x.matched[0]?.signals || []).map(s => `<span>${esc(s)}</span>`).join('')}</div></div>`).join('') + `<p class="note">${r.counts.catalogue} products checked · ${r.counts.catalogue - r.counts.fit} ruled out · ${r.alternatives.length} held in reserve</p>` : '<p class="note">Nothing fits this borrower, so no offer is shown.</p>';
+  if (t === 'gap') body = vGap();
+  else if (t === 'why') body = r.picked.length ? r.picked.map((x, i) => `<div class="why"><div class="why-h"><span class="rk">${i + 1}</span><b>${esc(x.name)}</b><em>${x.score}</em></div><div class="chips">${(x.matched[0]?.signals || []).map(s => `<span>${esc(s)}</span>`).join('')}</div></div>`).join('') + `<p class="note">${r.counts.catalogue} products checked · ${r.counts.catalogue - r.counts.fit} ruled out · ${r.alternatives.length} held in reserve</p>` : '<p class="note">Nothing fits this borrower, so no offer is shown.</p>';
   else if (t === 'rules') body = `<ul class="guards">${r.guards.map(g => `<li class="${g.flag ? 'flag' : ''}" ${pop(`<b>${esc(g.title)}</b><p>${esc(g.text)}</p><em>${esc(g.ref)}</em>`)}><i class="ph-fill ph-check-circle"></i><span>${esc(g.title)}<small>${esc(g.ref)}</small></span></li>`).join('')}</ul><p class="eyebrow" style="margin:12px 0 6px">This placement</p><ul class="guards">${pl.marks.map(m => `<li><i class="ph-fill ph-check-circle"></i><span>${esc(m)}</span></li>`).join('')}</ul>`;
   else body = `<div class="chain"><i class="ph-fill ph-link"></i>${r.log.entries.length} entries · hash chain intact</div><ol class="log">${r.log.entries.slice().reverse().map(e => `<li class="${e.step === 'Customer' ? 'cust' : ''}"><div><b>${esc(e.text)}</b><time>${new Date(e.at).toLocaleTimeString('en-IN', { hour12: false })}</time></div>${e.data ? `<small>${esc(e.data)}</small>` : ''}<code>${e.hash}</code></li>`).join('')}</ol>`;
-  return `<div class="pn-h"><p class="eyebrow">Decision record</p><button class="x" data-act="close-panel" aria-label="Close"><i class="ph-bold ph-x"></i></button></div><div class="ptabs">${tab('why', 'ph-target', 'Why')}${tab('rules', 'ph-shield-check', 'Compliance')}${tab('audit', 'ph-list-checks', 'Audit')}</div><div class="pbody">${body}</div>`;
+  return `<div class="pn-h"><p class="eyebrow">Decision record</p><button class="x" data-act="close-panel" aria-label="Close"><i class="ph-bold ph-x"></i></button></div><div class="ptabs">${tab('gap', 'ph-scales', 'Today')}${tab('why', 'ph-target', 'Why')}${tab('rules', 'ph-shield-check', 'Rules')}${tab('audit', 'ph-list-checks', 'Audit')}</div><div class="pbody">${body}</div>`;
 }
 function vRail() {
   const r = S.res;
   const b = (k, icon, label, n) => `<button data-panel="${k}" ${pop(`<b>${label}</b><p>Open the ${label.toLowerCase()} for this offer</p>`)}><i class="ph-bold ${icon}"></i><em>${n}</em><small>${label}</small></button>`;
-  return `<div class="rail">${b('why', 'ph-target', 'Why', r.picked.length)}${b('rules', 'ph-shield-check', 'Compliance', r.guards.filter(g => g.ok).length)}${b('audit', 'ph-list-checks', 'Audit', r.log.entries.length)}</div>`;
+  return `<div class="rail">${b('gap', 'ph-scales', 'Compare', LEGACY_VIOLATIONS.length)}${b('why', 'ph-target', 'Why', r.picked.length)}${b('rules', 'ph-shield-check', 'Compliance', r.guards.filter(g => g.ok).length)}${b('audit', 'ph-list-checks', 'Audit', r.log.entries.length)}</div>`;
 }
 
 /* ── the widget, in each placement ── */
@@ -128,6 +129,40 @@ function detailsSheet() {
     <div class="eq"><button class="w-btn ghost" data-act="close-sheet-no">Not now</button><button class="w-btn" data-act="agree" data-id="${x.id}" ${S.w.read ? '' : 'disabled'}>Add cover · ${inr(tot)}</button></div>
     <button class="lk c" data-act="own">I already have this cover elsewhere</button></div></section>`;
 }
+/* ── mis-selling contrast: the same borrower, sold the way most lending apps sell today ──
+   A fixed pack, pre-ticked, mandatory and deducted from the loan. Each numbered pin is one rule it breaks. */
+function vLegacy() {
+  const p = S.p, d = S.res.derived, L = legacy(p, S.res), fee = Math.round(p.amount * .0236);
+  const pin = n => `<button class="pin${S.pin === n ? ' on' : ''}" data-pin="${n}" aria-label="Violation ${n}" ${pop(`<b>${n}. ${esc(LEGACY_VIOLATIONS[n - 1][0])}</b><p>${esc(LEGACY_VIOLATIONS[n - 1][1])}</p><em>${esc(LEGACY_VIOLATIONS[n - 1][2])}</em>`)}>${n}</button>`;
+  return `<div class="phone legacy"><div class="island"></div><div class="screen">
+      <div class="sb"><span>9:41</span><span class="sbi"><i></i></span></div>
+      <div class="lb-bar"><button aria-label="Back"><i class="ph-bold ph-arrow-left"></i></button><span class="lb"><i></i>LoanBee</span><button class="help">Help</button></div>
+      <div class="lb-prog">${[1, 2, 3, 4, 5].map(i => `<i class="${i < 5 ? 'd' : 'c'}"></i>`).join('')}</div>
+      <div class="scroll"><h2>Review and sign</h2><p class="sub">Step 5 of 5 · Check your offer</p>
+        <div class="loan"><div class="ln-h"><span>Personal loan</span><em><i></i>Approved</em></div><b class="amt">${inr(p.amount)}</b>
+          <div class="ln-g"><div><small>Tenure</small><b>${p.tenure} months</b></div><div><small>Monthly EMI</small><b>${inr(d.emi)}</b></div><div><small>Interest</small><b>${p.rate}% p.a.</b></div><div><small>Processing fee</small><b>${inr(fee)}</b></div></div>
+          <div class="w-line lg"><div><b>LoanBee Insurance ${pin(7)}</b><small>Deducted from your loan ${pin(3)}</small></div><span class="lp">−${inr(L.total)}</span></div>
+          <div class="recv"><span>You receive</span><b>${inr(p.amount - fee - L.total)}</b></div></div>
+        <section class="lg-pack"><div class="lg-h"><b>Protection pack</b><span class="timer"><i class="ph-bold ph-timer"></i> Ends in <i id="lg-timer">01:59</i> ${pin(8)}</span></div>
+          <p class="mand"><i class="ph-fill ph-lock-simple"></i> Mandatory for loan disbursal ${pin(2)}</p>
+          ${L.items.map((x, i) => `<div class="lg-row"><span class="tick"><i class="ph-bold ph-check"></i></span><span>${esc(x.name)}</span><b>${inr(x.base)}</b>${i === 0 ? pin(1) : ''}</div>`).join('')}
+          <p class="lg-note">Standard pack for all borrowers ${pin(6)} <span>+ GST at payment ${pin(10)}</span></p>
+          <div class="lg-agree"><span class="tick"><i class="ph-bold ph-check"></i></span><span>I agree to all add-on services and their terms ${pin(4)} ${pin(5)}</span></div>
+        </section></div>
+      <div class="lb-cta lg-cta"><button>Accept and disburse</button><a>No, I don't want to protect my family ${pin(9)}</a></div>
+    </div></div>`;
+}
+/* The comparison: what the borrower is charged each way, the engine's verdict on today's pack, and the rules it breaks. */
+function vGap() {
+  const L = legacy(S.p, S.res), r = S.res, name = first(S.p.name), x = r.picked.find(k => k.id === S.w.added);
+  return `<div class="vs"><div class="bad"><small>Sold today</small><b>${inr(L.total)}</b><span>${L.items.length} products, all charged</span></div><div class="good"><small>With Symbo</small><b>${x ? inr(totalOf(x)) : '₹0'}</b><span>${x ? '1 chosen by ' + esc(name) : r.picked.length + ' offered, none forced'}</span></div></div>
+    <p class="eyebrow">Engine verdict on today's pack</p>
+    <ul class="verdicts">${L.items.map(i => `<li class="${i.ok ? 'ok' : 'no'}"><i class="ph-fill ${i.ok ? 'ph-check-circle' : 'ph-x-circle'}"></i><span>${esc(i.name)}<small>${esc(i.ok ? 'Suitable' : i.verdict)}${i.reason ? ' · ' + esc(i.reason) : ''}</small></span><b>${inr(i.price)}</b></li>`).join('')}</ul>
+    <p class="waste${L.wasted ? '' : ' ok'}">${L.wasted ? `<b>${inr(L.wasted)}</b> charged for cover ${esc(name)} does not need` : `All three fit ${esc(name)}. The way they are sold still breaks ${L.violations} rules.`}</p>
+    <p class="eyebrow">${L.violations} rules broken in today's flow</p>
+    <ol class="viol">${LEGACY_VIOLATIONS.map(([t, , ref], i) => `<li class="${S.pin === i + 1 ? 'on' : ''}" data-pin="${i + 1}"><span>${i + 1}</span><div><b>${esc(t)}</b><small>${esc(ref)}</small></div></li>`).join('')}</ol>
+    <p class="expo"><i class="ph-fill ph-warning"></i><span>The lender's own policy must provide customer compensation for mis-selling. <em>§101A · effective 1 January 2027</em></span></p>`;
+}
 function vPhone() {
   const p = S.p, d = S.res.derived, pl = PLACEMENTS[S.pl].key, fee = Math.round(p.amount * .0236), x = S.res.picked.find(k => k.id === S.w.added);
   const loanCard = `<div class="loan"><div class="ln-h"><span>Personal loan</span><em><i></i>Approved</em></div><b class="amt">${inr(p.amount)}</b>
@@ -154,12 +189,13 @@ function render() {
   $('#app').innerHTML = `<header class="top"><a class="brand" href="/"><img src="/hub/brand/symbo-logo.png" alt="Symbo"></a><div class="ttl"><small>Embedded widget</small><b>LoanBee checkout</b></div>
       <button class="m-btn l" data-act="drawer-left" aria-label="Borrower"><i class="ph-bold ph-user-gear"></i></button>
       <div class="pager" id="pager"><button data-act="prev" aria-label="Previous placement"><i class="ph-bold ph-caret-left"></i></button><div class="pg-t"><small>Placement ${S.pl + 1} of ${PLACEMENTS.length}</small><b>${pl.name}</b><div class="pg-d">${PLACEMENTS.map((_, i) => `<i class="${i === S.pl ? 'on' : ''}" data-go="${i}"></i>`).join('')}</div></div><button data-act="next" aria-label="Next placement"><i class="ph-bold ph-caret-right"></i></button></div>
+      <button class="cmp${S.contrast ? ' on' : ''}" data-act="contrast" aria-pressed="${S.contrast}"><i class="ph-bold ph-scales"></i><span>${S.contrast ? 'Comparing with today' : 'Compare with today'}</span></button>
       <button class="m-btn r" data-act="drawer-right" aria-label="Decision record"><i class="ph-bold ph-clipboard-text"></i></button>
       <span class="insured">Insured by <img src="/hub/brand/digit.png" alt="Digit"></span></header>
     <main class="stage${S.panel ? ' panel-open' : ''}${S.drawer ? ' drawer-' + S.drawer : ''}">
       <aside class="pn left">${vBorrower()}</aside>
-      <section class="mid" id="swipe">${vPhone()}
-        <div class="meta"><p class="where"><i class="ph-bold ph-map-pin"></i>${esc(pl.where)}</p><div class="taps"><span><b>${pl.add}</b>tap${pl.add > 1 ? 's' : ''} to add</span><span><b>${pl.skip}</b>tap${pl.skip === 1 ? '' : 's'} to skip</span><span><b>Never</b>pre-selected</span></div><p class="best">${esc(pl.best)}</p></div></section>
+      <section class="mid${S.contrast ? ' contrast show-' + S.side : ''}" id="swipe">${S.contrast ? `<div class="side-sw"><button class="${S.side === 'today' ? 'on' : ''}" data-side="today">Sold today</button><button class="${S.side === 'symbo' ? 'on' : ''}" data-side="symbo">With Symbo</button></div><div class="pair"><div class="ph-col today"><p class="tagline bad"><i class="ph-fill ph-x-circle"></i>Sold today · ${LEGACY_VIOLATIONS.length} rules broken</p>${vLegacy()}</div><div class="ph-col symbo"><p class="tagline good"><i class="ph-fill ph-check-circle"></i>With Symbo · same borrower</p>${vPhone()}</div></div>` : `${vPhone()}
+        <div class="meta"><p class="where"><i class="ph-bold ph-map-pin"></i>${esc(pl.where)}</p><div class="taps"><span><b>${pl.add}</b>tap${pl.add > 1 ? 's' : ''} to add</span><span><b>${pl.skip}</b>tap${pl.skip === 1 ? '' : 's'} to skip</span><span><b>Never</b>pre-selected</span></div><p class="best">${esc(pl.best)}</p></div>`}</section>
       ${S.panel ? `<aside class="pn right">${vRecord()}</aside>` : vRail()}
       <div class="dscrim" data-act="close-drawer"></div></main>`;
 }
@@ -167,14 +203,17 @@ function render() {
 /* ── events ── */
 function go(i) { S.pl = (i + PLACEMENTS.length) % PLACEMENTS.length; S.w = freshW(); S.w.open = S.pl === 0; if (pick()) S.res.log.add('Widget', `Offer shown · ${PLACEMENTS[S.pl].name}`, 'Not pre-selected'); render(); }
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-act],[data-set],[data-person],[data-panel],[data-go]'); if (!t) return;
+  const t = e.target.closest('[data-act],[data-set],[data-person],[data-panel],[data-go],[data-pin],[data-side]'); if (!t) return;
   const d = t.dataset;
   if (d.person) { S.p = { ...PEOPLE.find(x => x.key === d.person) }; return rerun(); }
   if (d.set) { const cur = S.p[d.set]; S.p[d.set] = typeof cur === 'number' ? Number(d.val) : d.val; return rerun(); }
   if (d.panel) { S.panel = d.panel; S.drawer = S.drawer === 'right' ? 'right' : S.drawer; return render(); }
   if (d.go) return go(Number(d.go));
+  if (d.side) { S.side = d.side; return render(); }
+  if (d.pin) { const n = Number(d.pin); S.pin = S.pin === n ? null : n; S.panel = 'gap'; if (matchMedia('(max-width: 1099px)').matches) S.drawer = 'right'; render(); const li = document.querySelector('.viol li.on'); if (li) li.scrollIntoView({ block: 'nearest' }); return; }
   const x = d.id ? S.res.picked.find(k => k.id === d.id) : pick();
   switch (d.act) {
+    case 'contrast': S.contrast = !S.contrast; S.pin = null; S.side = 'today'; if (S.contrast) { if (!matchMedia('(max-width: 1099px)').matches) S.panel = 'gap'; S.res.log.add('Widget', "Compared with today's bundled flow", `${LEGACY_VIOLATIONS.length} rules broken there · 0 here`); } else if (S.panel === 'gap') S.panel = null; return render();
     case 'prev': return go(S.pl - 1);
     case 'next': return go(S.pl + 1);
     case 'toggle-open': S.w.open = !S.w.open; if (S.w.open) event('Opened the protection card'); return render();
@@ -219,6 +258,9 @@ document.addEventListener('mouseover', e => {
   let y = r.bottom + 10; if (y + h > innerHeight - 8) y = r.top - h - 10;
   popEl.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width / 2 - w / 2)) + 'px'; popEl.style.top = Math.max(8, y) + 'px';
 });
+/* the legacy flow's fake deadline keeps ticking, as it would */
+let lgT = 119;
+setInterval(() => { const el = document.getElementById('lg-timer'); if (!el) return; lgT = lgT > 0 ? lgT - 1 : 119; el.textContent = `0${Math.floor(lgT / 60)}:${String(lgT % 60).padStart(2, '0')}`; }, 1000);
 S.res = run(S.p); S.w = freshW(); S.w.open = true;
 S.res.log.add('Widget', `Offer shown · ${PLACEMENTS[0].name}`, `${pick()?.name} · not pre-selected`);
 render();

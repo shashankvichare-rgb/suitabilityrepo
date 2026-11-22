@@ -276,3 +276,31 @@ export function apiView(res) {
     response: { request_id: res.reqId, evaluated: res.counts.catalogue, recommended: res.picked.map(x => ({ product_id: x.id, name: x.name, fit: x.score, premium: x.priceValue, why: x.matched[0]?.signals || [] })), services: res.vas.map(v => v.id), guardrails: res.guards.map(g => ({ check: g.title, passed: g.ok })), audit_ref: res.log.entries.at(-1)?.hash }
   };
 }
+
+/* ── "how it is sold today": the same pack bundled into every loan, judged by the engine ──
+   Used by the mis-selling contrast. The pack is fixed; the verdict on each product comes from this customer's run. */
+export const LEGACY_PACK = ['FIN-02', 'FIN-05', 'FIN-07'];
+export const LEGACY_VIOLATIONS = [
+  ['Pre-ticked add-ons', 'Insurance is in the basket before the customer does anything.', 'Basket sneaking · Annex III'],
+  ['Mandatory for the loan', 'Disbursal is made conditional on buying the cover.', 'Compulsory bundling · §101V'],
+  ['Deducted from loan money', 'Premium comes out of the disbursal with no separate consent.', 'Silent deduction · §101W'],
+  ['One box for everything', 'A single "I agree to all" covers three products.', 'Clubbed consent · §101G'],
+  ['Terms never shown', 'Consent is taken without the terms being opened.', 'No terms gate · §101H'],
+  ['Same pack for everyone', 'No check of age, income, existing cover or need.', 'No suitability · §101I'],
+  ['Sold as the lender\'s own', 'The pack carries the lender\'s name and hides the insurer.', 'Role not disclosed · §101J'],
+  ['Countdown timer', 'A made-up deadline pushes an instant decision.', 'False urgency · Annex III'],
+  ['Guilt-worded tiny skip', 'Decline is small, grey and shames the customer.', 'Confirm shaming · Annex III'],
+  ['GST added at the end', 'The first price shown is not the price paid.', 'Drip pricing · Annex III']
+];
+const VERDICT = { recommended: ['Suitable', true], alt: ['Suitable', true], fit: ['Suitable', true], overlap: ['Already covered', false], lowfit: ['No need found', false], ineligible: ['Not eligible', false], unmapped: ['Not eligible', false] };
+export function legacy(p, res) {
+  const d = res.derived;
+  const items = LEGACY_PACK.map(id => {
+    const x = res.all.find(k => k.id === id), r = R[id];
+    const [verdict, ok] = VERDICT[x.state] || ['Not assessed', false];
+    const base = Math.round(r.price ? r.price(p, d) : 0);
+    return { id, name: x.name.replace(/ \(.*\)/, ''), base, price: Math.round(base * 1.18), verdict, ok, reason: ok ? (x.matched[0]?.signals || []).join(' · ') : x.reason.replace(/^Already covered: w/, 'W') };
+  });
+  const total = items.reduce((n, x) => n + x.price, 0), bad = items.filter(x => !x.ok);
+  return { items, total, unsuitable: bad.length, wasted: bad.reduce((n, x) => n + x.price, 0), violations: LEGACY_VIOLATIONS.length };
+}
