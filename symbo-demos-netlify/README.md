@@ -24,6 +24,19 @@ Every page on symbo.si is behind one access gate. Nobody sees a demo without sig
 01 Suitability in action · 02 Embedded widget journey · 03 Agent journey · 04 Motor agent journey · 05 Pet insurance journey.
 The Credit Life journey and the first consumer-durables agent build stay reachable by URL and invitable, but are off the hub and the session menu (`hidden: true` in `access-core.mjs`).
 
+### Pet insurance journey (`demos/pet-insurance/`)
+
+Landing v3. `index.html` sends the visitor to `a.html` (Variation 1, reasons first); `b.html` is Variation 2 (cashless
+vets first); both lead to `quote.html`. `pet.css`, `pet.js`, `icons.js`, `hospitals.js` and `assets/` are the landing
+page source as designed and are copied in unchanged. The only site-specific piece is `variant-toggle.js`, loaded as the
+first thing in `<body>` on the three pages: it adds the Variation 1 / Variation 2 bar above the header on `a.html` and
+`b.html`, and keeps the session menu clear of the pages' bottom bars on small screens. To update the landing page,
+copy the new files over and keep that one script tag (and the `noindex` meta) in each page.
+
+The earlier purchase flow (`checkout.html`, `support.js`, `icons-tabler.js`, `petins/`) is still in the folder but
+nothing links to it. `netlify/functions/pet-api.js` loads `petins/engine.js` and `petins/config.js`, so remove the
+function and its `/api/*` redirect before deleting those.
+
 ### Shared suitability engine (`hub/engine/`)
 
 - `catalogue.js` is generated from the Symbo Product Master sheet (Products, VAS, Bundles tabs): 91 products, 196 services, 28 bundles, tagged by 11 partner types. Rebuild it from the sheet; do not edit by hand.

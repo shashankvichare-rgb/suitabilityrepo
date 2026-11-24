@@ -1263,7 +1263,7 @@ a:hover{color:#00c98f}
             </div>
             <div style="display:flex;align-items:center;gap:12px;background:#ffffff;border:1px solid #EFE5DF;border-radius:12px;padding:12px 14px">
               <div style="width:36px;height:36px;border-radius:10px;background:#FDF0EF;color:#D3434F;display:flex;align-items:center;justify-content:center;font-size:20px"><i class="ph-bold ph-dog"></i></div>
-              <div style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="font-size:13px;font-weight:600;color:#2A2629">Labrador · 3 yrs</span><span style="font-size:11px;color:#5E575B">Mumbai · Sum insured ₹5L</span></div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="font-size:13px;font-weight:600;color:#2A2629">Dog · 3 yrs</span><span style="font-size:11px;color:#5E575B">Mumbai · Sum insured ₹5L</span></div>
             </div>
             <div style="display:flex;flex-direction:column;gap:8px">
               <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:4px">
@@ -1277,7 +1277,7 @@ a:hover{color:#00c98f}
             </div>
             <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:#ffffff;border:1px solid #EFE5DF;border-radius:12px;padding:12px 14px;margin-top:auto">
               <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#5E575B;font-weight:600">3-year premium</span><span style="font-family:'Inter Tight',sans-serif;font-size:15px;font-weight:600;color:#2A2629">₹11,379</span></div>
-              <span style="font-size:12px;font-weight:600;color:#ffffff;background:#D3434F;padding:5px 10px;border-radius:9999px">Get my quote</span>
+              <span style="font-size:12px;font-weight:600;color:#ffffff;background:#D3434F;padding:5px 10px;border-radius:9999px">Buy now</span>
             </div>
           </div>
           <div style="padding:32px;display:flex;flex-direction:column;gap:14px;flex:1">
@@ -1285,8 +1285,8 @@ a:hover{color:#00c98f}
               <span style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.14em;color:#006d41;text-transform:uppercase">05 / Pet insurance journey</span>
               <span style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#1b1c1c;background:#fdd340;padding:3px 9px;border-radius:9999px">New</span>
             </div>
-            <h3 style="margin:0;font-family:'Inter Tight',sans-serif;font-weight:500;font-size:28px;letter-spacing:-.02em;color:#013a51">Pet cover, landing to policy</h3>
-            <p style="margin:0;font-size:15px;line-height:1.65;color:#3c4a40;text-wrap:pretty">A partner-branded pet insurance page. Get a live 3-year price, verify by OTP, add pet and nominee details, complete KYC, pay and download the policy.</p>
+            <h3 style="margin:0;font-family:'Inter Tight',sans-serif;font-weight:500;font-size:28px;letter-spacing:-.02em;color:#013a51">Pet cover landing, 2 variations</h3>
+            <p style="margin:0;font-size:15px;line-height:1.65;color:#3c4a40;text-wrap:pretty">A partner-branded pet insurance landing page in 2 variations: reasons first and cashless vets first. Find cashless vets by pincode, check the prefilled details and see the 3-year price.</p>
             <span style="margin-top:auto;padding-top:12px;font-family:'Inter Tight',sans-serif;font-size:15px;font-weight:600;color:#006d41;display:flex;align-items:center;gap:8px">Open pet insurance demo <i class="ph-bold ph-arrow-up-right"></i></span>
           </div>
         </a>
@@ -1363,7 +1363,7 @@ class Component extends DCLogic {
     const jt = tick % 6;
     const journeyRecs = [['Extended Warranty', '₹1,592'], ['Hospital Cash & EMI', '₹999'], ['Home & Digital Assist', '₹1,199']].map(([name, price], i) => ({ name, price, op: i < jt ? 1 : 0, tf: i < jt ? 'none' : 'translateY(8px)' }));
     const pt = tick % 7;
-    const petSteps = ['Quote', 'OTP', 'Cover', 'Details', 'KYC', 'Pay'].map((label, i) => ({ label, bg: i < pt ? '#23885C' : i === pt ? '#D3434F' : '#EFE5DF', fg: i <= pt ? '#2A2629' : '#9a9095' }));
+    const petSteps = ['Why', 'Vets', 'Cover', 'Details', 'Price', 'Sign up'].map((label, i) => ({ label, bg: i < pt ? '#23885C' : i === pt ? '#D3434F' : '#EFE5DF', fg: i <= pt ? '#2A2629' : '#9a9095' }));
     const mt = tick % 4;
     const addonDefs = [['Zero depreciation', 2140], ['Engine protect', 1180], ['Roadside assistance', 399]];
     const motorAddons = addonDefs.map(([name, p], i) => {
